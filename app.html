@@ -44,6 +44,10 @@ label.f>span{display:block;font-size:12px;font-weight:600;color:var(--mute);marg
 input[type=text],input[type=date],input[type=password],input[type=number],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 textarea{resize:none;min-height:38px;overflow:hidden;display:block}
 input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;border-color:transparent}
+.f>span .mv{float:right;background:none;border:1px solid var(--line);color:var(--acc2);border-radius:6px;padding:0 7px;font-size:12px;font-weight:600;line-height:18px}
+.f>span .dt{font-style:normal;font-weight:500;color:var(--warn)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:#1b2430;color:#fff;padding:10px 14px;border-radius:10px;z-index:30;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:92vw}
+#toast button{background:none;border:0;color:#9cc3ff;font-weight:700;margin-left:8px}
 .warnbar{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:13px;margin-bottom:8px}
 .chk{display:flex;align-items:flex-start;gap:9px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}
 .chk:last-child{border-bottom:0}
@@ -147,6 +151,7 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
   <p class="note" id="storeNote"></p>
 </div></div>
 
+<div id="toast" class="hidden noprint"></div>
 <div class="sheet hidden" id="syncSheet"><div class="box" id="syncBox"></div></div>
 
 <script>/*QRLIB*/</script>
@@ -177,7 +182,7 @@ function newPatient(){
   return p;
 }
 function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
-function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>a[k],o);t[last]=v}
+function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>(a[k]==null&&(a[k]={}),a[k]),o);t[last]=v}
 const P=()=>S.patients.find(p=>p.id===cur);
 /* per-field edit times, so two devices editing the same patient merge cleanly */
 const unitOf=k=>k.startsWith("problems.")?"problems":k.startsWith("today.verify.")?"today.verify":k;
@@ -292,10 +297,40 @@ function examList(){
   return EXAM.map(([k,l])=>{const s=p.examChk[k]||0;return `<button class="tri" data-act="tri" data-key="${k}" data-s="${s}"><span class="dot">${s===1?"✓":s===2?"!":""}</span><span>${esc(l)}</span></button>`}).join("");
 }
 function count(obj,n){return `${Object.values(obj).filter(Boolean).length}/${n}`}
+const mmdd=d=>{const m=String(d||"").match(/^\d{4}-(\d\d)-(\d\d)$/);return m?(+m[1])+"/"+(+m[2]):""};
 function valuesBlock(which){
-  const p=P(),v=p[which];
-  return `<div class="grid two">${VALUES.map(([k,l])=>ta(which+"."+k,l)).join("")}</div>`;
+  const p=P(),dates=(p.prior&&p.prior.dates)||{};
+  return `<div class="grid two">${VALUES.map(([k,l])=>{
+    const lab=which==="today"?`${l}<button class="mv" data-act="mv" data-f="${k}" title="Move to Prior">→ Prior</button>`
+      :`${l}${dates[k]?` <em class="dt">from ${esc(mmdd(dates[k]))}</em>`:""}`;
+    return ta(which+"."+k,lab);
+  }).join("")}</div>`;
 }
+/* Move today's values into Prior (per field). Blank fields are skipped so older Prior values aren't wiped. */
+let undoSnap=null,toastT=null;
+function moveValues(p,keys,track=true){
+  const moved=keys.filter(k=>(p.today[k]||"").trim());
+  if(!moved.length)return [];
+  if(track)undoSnap={pid:p.id,keys:moved,today:moved.map(k=>p.today[k]),prior:moved.map(k=>p.prior[k]),dates:moved.map(k=>(p.prior.dates||{})[k])};
+  p.prior.dates=p.prior.dates||{};
+  for(const k of moved){
+    p.prior[k]=p.today[k];p.prior.dates[k]=p.today.date||today();p.today[k]="";
+    if(track){markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)}
+  }
+  return moved;
+}
+function undoMove(){
+  const u=undoSnap;undoSnap=null;hideToast();if(!u)return;
+  const p=S.patients.find(x=>x.id===u.pid);if(!p)return;
+  p.prior.dates=p.prior.dates||{};
+  u.keys.forEach((k,i)=>{p.today[k]=u.today[i];p.prior[k]=u.prior[i];if(u.dates[i]===undefined)delete p.prior.dates[k];else p.prior.dates[k]=u.dates[i];markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)});
+  if(p.id===cur){const y=scrollY;render();scrollTo(0,y)}save();
+}
+function toast(msg,undo){
+  const t=$("toast");t.innerHTML=esc(msg)+(undo?' <button data-act="undo">Undo</button>':"");t.classList.remove("hidden");
+  clearTimeout(toastT);toastT=setTimeout(hideToast,undo?8000:2500);
+}
+function hideToast(){$("toast").classList.add("hidden")}
 function render(){
   const m0=$("main"),keepOpen=(P()&&m0.dataset.pid===cur)?[...m0.querySelectorAll("details")].map(d=>d.open):null;
   renderTabs();
@@ -318,9 +353,9 @@ function render(){
     <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
     <label class="f"><span>Labs to verify before rounds</span></label>${verify}
     <button class="add" data-act="addVerify">＋ Lab to verify</button>
-    <div style="height:10px"></div>${valuesBlock("today")}</div></details>
+    <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 8px">⇢ Move all of today's values to Prior</button>${valuesBlock("today")}</div></details>
 
-  <details><summary>Prior values <span class="cnt">${p.prior.date?esc(p.prior.date):""}</span></summary><div class="body">
+  <details><summary>Prior values <span class="cnt"></span></summary><div class="body">
     <div class="warnbar">⚠️ Trend / context only — DO NOT present as current</div>
     ${valuesBlock("prior")}</div></details>
 
@@ -341,7 +376,7 @@ function render(){
     <button class="btn" data-act="newDay">☀️ New day for this patient</button>
     <button class="btn danger" data-act="delPt">Remove patient</button>
   </div>
-  <p class="meta noprint">"New day" moves today's values into Prior, clears today's values, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
+  <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
   $("main").dataset.pid=p.id;
   if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
   $("main").querySelectorAll("textarea").forEach(grow);
@@ -378,6 +413,9 @@ document.addEventListener("click",e=>{
     case"up":if(i>0){markTs("problems");[p.problems[i-1],p.problems[i]]=[p.problems[i],p.problems[i-1]];rerender()}break;
     case"down":if(i<p.problems.length-1){markTs("problems");[p.problems[i+1],p.problems[i]]=[p.problems[i],p.problems[i+1]];rerender()}break;
     case"newDay":if(confirm("Start a new day for this patient? Today's values move to Prior and checklists reset.")){rollover(p);rerender()}break;
+    case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
+    case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
+    case"undo":undoMove();break;
     case"newDayAll":hide("menu");if(S.patients.length&&confirm("Start a new day for ALL "+S.patients.length+" patients?")){S.patients.forEach(rollover);rerender()}break;
     case"menu":show("menu");break;
     case"closeMenu":hide("menu");break;
@@ -390,8 +428,7 @@ document.addEventListener("click",e=>{
 });
 $("menu").addEventListener("click",e=>{if(e.target.id==="menu")hide("menu")});
 function rollover(p){
-  const t=p.today,hasAny=VALUES.some(([k])=>(t[k]||"").trim());
-  if(hasAny){p.prior=Object.assign({date:t.date},Object.fromEntries(VALUES.map(([k])=>[k,t[k]||""])))}
+  const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
   p.today=Object.assign({date:today(),verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
   p.medsChk={};p.examChk={};p.apChk={};p.examNotes="";p.updated=Date.now();p.epoch=Date.now();p.ts={};
