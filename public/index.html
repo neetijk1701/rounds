@@ -48,6 +48,10 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .f>span .dt{font-style:normal;font-weight:500;color:var(--warn)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:#1b2430;color:#fff;padding:10px 14px;border-radius:10px;z-index:30;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:92vw}
 #toast button{background:none;border:0;color:#9cc3ff;font-weight:700;margin-left:8px}
+.old{color:var(--mute)!important;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(127,127,127,.07) 6px 12px)!important;font-style:italic}
+.oldbar{background:rgba(127,127,127,.12);color:var(--mute);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:8px}
+.oldbar button{background:none;border:0;color:var(--acc2);font-weight:700;padding:0 0 0 4px;font-size:13px}
+.mini.keep{color:var(--ok);border-color:var(--ok)}
 .warnbar{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:13px;margin-bottom:8px}
 .chk{display:flex;align-items:flex-start;gap:9px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}
 .chk:last-child{border-bottom:0}
@@ -2638,7 +2642,7 @@ function render(){
   if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Data stays in this browser on this device.<br>The page is blocked from making any network requests.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
-  const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem"><button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
+  const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   $("main").innerHTML=`
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}${tx("code","Code status")}</div>
@@ -2666,15 +2670,17 @@ function render(){
   <details open><summary>A/P checklist <span class="cnt">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
 
   <details open><summary>Assessment &amp; plan</summary><div class="body">
-    ${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
+    ${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
     <button class="add" data-act="addProb">＋ Problem</button></div></details>
 
   <div class="toolbar noprint">
     <button class="btn" data-act="newDay">☀️ New day for this patient</button>
     <button class="btn danger" data-act="delPt">Remove patient</button>
   </div>
-  <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
+  <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), grays out the A&amp;P for you to update, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
   $("main").dataset.pid=p.id;
+  if(p.onelinerOld)$("main").querySelector('[data-k="oneliner"]').classList.add("old");
+  p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
   if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
   $("main").querySelectorAll("textarea").forEach(grow);
 }
@@ -2685,6 +2691,7 @@ $("main").addEventListener("input",e=>{
   const t=e.target,k=t.dataset.k;if(!k)return;
   setPath(P(),k,t.type==="checkbox"?t.checked:t.value);markTs(k);
   if(t.tagName==="TEXTAREA")grow(t);
+  if(t.classList.contains("old"))unGray(k,t);
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
@@ -2713,6 +2720,8 @@ document.addEventListener("click",e=>{
     case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
     case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
     case"undo":undoMove();break;
+    case"apKeep":p.problems[i].old={};markTs("problems");rerender();break;
+    case"apKeepAll":p.onelinerOld=false;p.problems.forEach(pr=>pr.old={});markTs("problems");markTs("onelinerOld");rerender();break;
     case"newDayAll":hide("menu");if(S.patients.length&&confirm("Start a new day for ALL "+S.patients.length+" patients?")){S.patients.forEach(rollover);rerender()}break;
     case"menu":show("menu");break;
     case"closeMenu":hide("menu");break;
@@ -2724,7 +2733,23 @@ document.addEventListener("click",e=>{
   }
 });
 $("menu").addEventListener("click",e=>{if(e.target.id==="menu")hide("menu")});
+function apBanner(p){
+  const any=p.onelinerOld||p.problems.some(pr=>pr.old&&Object.keys(pr.old).length);
+  if(!any)return"";
+  return `<div class="oldbar">Gray = carried over from ${esc(mmdd(p.apFrom)||"yesterday")}. Edit a field to make it current, or tap ✓ if it's unchanged. <button data-act="apKeepAll">Mark all current</button></div>`;
+}
+function unGray(k,el){
+  const p=P();el.classList.remove("old");
+  if(k==="oneliner"){p.onelinerOld=false;markTs("onelinerOld")}
+  else{const m=k.match(/^problems\.(\d+)\.(\w+)$/);if(m){const pr=p.problems[+m[1]];if(pr&&pr.old){delete pr.old[m[2]];markTs("problems")}}}
+  const b=$("main").querySelector(".oldbar");if(b&&!$("main").querySelector(".old"))b.remove();
+  const i=k.match(/^problems\.(\d+)\./);if(i&&!Object.keys(p.problems[+i[1]].old||{}).length){const kb=$("main").querySelector(`[data-act="apKeep"][data-i="${i[1]}"]`);if(kb)kb.remove()}
+}
 function rollover(p){
+  // A&P carries forward, grayed out until you touch it
+  if((p.oneliner||"").trim())p.onelinerOld=true;
+  p.problems.forEach(pr=>{pr.old={};["p","a","pl"].forEach(fl=>{if((pr[fl]||"").trim())pr.old[fl]=1})});
+  p.apFrom=p.today.date||today();
   const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
   p.today=Object.assign({date:today(),verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
