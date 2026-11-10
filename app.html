@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Hard block on all network access: nothing typed here can be sent anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1f3a5f">
+<title>Rounds</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1b2430;--mute:#667085;--line:#d9dee6;--acc:#1f3a5f;--acc2:#2f6fb3;--ok:#1e8e5a;--warn:#b54708;--bad:#c0392b;--warnbg:#fff4e5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#18202b;--ink:#e6ebf2;--mute:#98a2b3;--line:#2b3644;--acc:#9cc3ff;--acc2:#6aa6f0;--ok:#4cc38a;--warn:#f5a524;--bad:#ff6b6b;--warnbg:#2b2112}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:5;background:var(--acc);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px}
+@media (prefers-color-scheme:dark){header{background:#132235}}
+.hrow{display:flex;gap:6px;align-items:center}
+.hrow h1{font-size:17px;margin:0;flex:1}
+.pill{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:999px;padding:4px 9px;font-size:12px;white-space:nowrap}
+.pill.bad{background:#b54708}
+.qr{background:#fff;padding:10px;border-radius:10px;display:flex;justify-content:center;margin:8px 0}
+.qr svg{width:220px;height:220px}
+.code{font:600 17px ui-monospace,Menlo,monospace;letter-spacing:.06em;text-align:center;user-select:all;margin:6px 0}
+.hbtn{background:rgba(255,255,255,.15);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:14px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.tab{flex:none;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:999px;padding:6px 12px;font-size:14px;white-space:nowrap}
+.tab.on{background:#fff;color:#1f3a5f;font-weight:600}
+.tab small{opacity:.75;margin-left:4px}
+main{max-width:900px;margin:0 auto;padding:10px 10px 90px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+summary{list-style:none;padding:11px 12px;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"▸";margin-left:auto;transition:transform .15s;color:var(--mute)}
+details[open]>summary::after{transform:rotate(90deg)}
+summary .cnt{font-weight:600;text-transform:none;letter-spacing:0;color:var(--mute);font-size:12px}
+.body{padding:0 12px 12px}
+.grid{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:640px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+label.f{display:block}
+label.f>span{display:block;font-size:12px;font-weight:600;color:var(--mute);margin:0 0 3px}
+input[type=text],input[type=date],input[type=password],input[type=number],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+textarea{resize:none;min-height:38px;overflow:hidden;display:block}
+input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;border-color:transparent}
+.warnbar{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 10px;font-weight:600;font-size:13px;margin-bottom:8px}
+.chk{display:flex;align-items:flex-start;gap:9px;padding:8px 4px;border-bottom:1px solid var(--line);font-size:14px}
+.chk:last-child{border-bottom:0}
+.chk input[type=checkbox]{width:20px;height:20px;flex:none;margin:0;accent-color:var(--ok)}
+.chk.done>.lbl{color:var(--mute);text-decoration:line-through}
+.chk .lbl{flex:1}
+.tri{display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:14px;width:100%;background:none;border-left:0;border-right:0;border-top:0;color:var(--ink);text-align:left}
+.tri .dot{width:22px;height:22px;flex:none;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:13px}
+.tri[data-s="1"] .dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.tri[data-s="2"] .dot{background:var(--bad);border-color:var(--bad);color:#fff}
+.tri[data-s="2"]{font-weight:600}
+.legend{font-size:12px;color:var(--mute);margin:0 0 6px}
+.inline{display:inline-flex;align-items:center;gap:4px}
+.inline input{width:56px;padding:3px 6px;font-size:15px}
+.inline input.w{width:110px}
+.cols{columns:1}
+@media(min-width:640px){.cols{columns:2;column-gap:18px}.cols>*{break-inside:avoid}}
+.vrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.vrow input[type=text]{flex:1}
+.x{background:none;border:0;color:var(--mute);font-size:18px;padding:4px 8px}
+.add{background:none;border:1px dashed var(--line);color:var(--acc2);border-radius:8px;padding:7px 10px;width:100%;margin-top:4px;font-weight:600}
+.prob{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.prob .ph{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.prob .num{font-weight:800;color:var(--acc);width:22px}
+.prob .ph input{flex:1;font-weight:600}
+.mini{background:none;border:1px solid var(--line);border-radius:6px;color:var(--mute);padding:3px 8px;font-size:13px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:8px 12px;font-weight:600;font-size:14px}
+.btn.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.meta{font-size:12px;color:var(--mute);margin:4px 2px}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+/* overlays */
+.ov{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
+.ov .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;max-width:380px;width:100%}
+.ov h2{margin:0 0 6px;font-size:20px}
+.ov p{color:var(--mute);font-size:14px;margin:6px 0 12px}
+.ov .btn{width:100%;margin-top:8px}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:6px}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:15;display:flex;align-items:flex-end;justify-content:center}
+.sheet .box{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 8px}
+.sheet .btn{width:100%;margin-top:8px;text-align:left}
+.sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
+.hidden{display:none!important}
+@media print{
+  header,.toolbar,.add,.x,.mini,.sheet,.ov,.noprint{display:none!important}
+  body{background:#fff;color:#000;font-size:11px}
+  main{padding:0;max-width:none}
+  details{border:1px solid #999;break-inside:avoid;margin:6px 0}
+  details:not([open])>.body{display:block}
+  input,textarea{border:0;border-bottom:1px solid #ccc;border-radius:0;padding:2px;font-size:11px}
+  .tri,.chk{padding:2px;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<header class="noprint">
+  <div class="hrow">
+    <h1 id="title">Rounds</h1>
+    <button class="pill hidden" id="syncPill" data-act="syncSheet"></button>
+    <button class="hbtn" data-act="addPt">＋ Patient</button>
+    <button class="hbtn" data-act="menu" aria-label="Menu">☰</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<main id="main"></main>
+
+<!-- First run / lock screens -->
+<div class="ov hidden" id="ovSetup"><div class="box">
+  <h2>Rounds</h2>
+  <p>Everything you type stays in this browser on this device. The page cannot make network requests.</p>
+  <p>Set a passcode to encrypt what's saved here (recommended). There is no recovery if you forget it.</p>
+  <input type="password" id="setP1" placeholder="Passcode" autocomplete="new-password">
+  <input type="password" id="setP2" placeholder="Confirm passcode" autocomplete="new-password" style="margin-top:8px">
+  <div class="err" id="setErr"></div>
+  <button class="btn pri" id="setGo">Set passcode</button>
+  <button class="btn" id="setSkip">Continue without a passcode</button>
+</div></div>
+
+<div class="ov hidden" id="ovLock"><div class="box">
+  <h2>🔒 Locked</h2>
+  <p>Enter your passcode to unlock.</p>
+  <input type="password" id="lockP" placeholder="Passcode" autocomplete="current-password">
+  <div class="err" id="lockErr"></div>
+  <button class="btn pri" id="lockGo">Unlock</button>
+  <button class="btn danger" id="lockWipe">Forgot it — erase everything</button>
+</div></div>
+
+<div class="sheet hidden" id="menu"><div class="box">
+  <h3>Menu</h3>
+  <button class="btn" data-act="syncSheet">🔄 Sync devices</button>
+  <button class="btn" data-act="newDayAll">☀️ New day — all patients</button>
+  <button class="btn" data-act="print">🖨 Print this patient</button>
+  <button class="btn" data-act="lockNow" id="mLock">🔒 Lock now</button>
+  <button class="btn" data-act="passcode" id="mPass">Set passcode</button>
+  <button class="btn danger" data-act="wipe">Erase all data on this device only</button>
+  <button class="btn" data-act="closeMenu">Close</button>
+  <p class="note" id="storeNote"></p>
+</div></div>
+
+<div class="sheet hidden" id="syncSheet"><div class="box" id="syncBox"></div></div>
+
+<script>/*QRLIB*/</script>
+<script>
+"use strict";
+/* ---------- content from Outline v3 ---------- */
+const PT_INFO=[["name","Name, Age"],["room","Room"],["on","O/N"],["hpi","HPI"],["ros","ROS"],["pcp","PCP"],["code","Code status"]];
+const BACKGROUND=[["pmh","PMH"],["psh","PSH"],["allergies","Drug Allergies"],["meds","Meds"],["social","Social Hx"],["family","Family Hx"]];
+const VALUES=[["vitals","Vital signs"],["exam","Exam"],["io","I/O"],["labs","Labs"],["cultures","Cultures"],["path","Pathology"],["imaging","Imaging"],["consults","Consults"]];
+const MEDS=[["diet","Diet / NPO status: confirmed?"],["dvt","DVT prophylaxis: on it?"],["bowel","Bowel regimen if on opioids?"],["newmeds","New meds: indication clear?"],["abx","ABX"],["renal","Renal/hepatic dose adjustment?"],["home","Home meds: still holding?"],["prn","PRN usage overnight?"],["gi","GI prophylaxis if indicated?"]];
+const EXAM=[["gen","Gen: alert, distressed?"],["orient","Orientation vs baseline"],["temp","Temp / diaphoresis"],["wob","Work of breathing"],["jvd","JVD"],["heart","Heart sounds: murmur, S3/S4?"],["breath","Breath sounds: crackles, wheeze, diminished?"],["perc","Percussion: dull vs hyperresonant?"],["bs","Bowel sounds"],["abd","Abdomen: tender, distended, guarding?"],["bm","Last BM / flatus"],["hsm","Hepatosplenomegaly"],["ascites","Ascites: shifting dullness?"],["ngt","NGT / ostomy output"],["edema","Edema: bilateral? pitting? grade?"],["calves","Calves: tender, asymmetric?"],["skin","Skin: breakdown, wounds, turgor"],["jaundice","Jaundice / pallor / icterus"],["lines","Lines: erythema, necessity?"],["foley","Foley: indicated? output? hematuria?"]];
+const AP=[["newprob","New problems overnight? → ADD TO LIST"],["each","Each problem: status + plan for today"],["resolved","Anything resolved? Remove it."],["oneliner","One-liner ready?"],["keeping","What's keeping them here today?"],["dispo","Dispo barrier: lab / PT / placement?"],["consult","Consult recs actioned?"],["family","Family/patient questions pending?"],["attending","Anticipated attending questions?"],["order","Before presenting: problems ordered by priority (most acute first)?"],["ddx","DDx leading — don't wait to be asked"]];
+
+/* ---------- state ---------- */
+const LS_ENC="rounds.enc.v1", LS_PLAIN="rounds.plain.v1", LS_VAULT="rounds.vault.v1", LOCK_MIN=5, POLL_S=10;
+let S=null, cur=null, key=null, salt=null, hiddenAt=0, idleT=null, saveT=null, canStore=true;
+const $=id=>document.getElementById(id);
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const uid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const blankVals=()=>Object.fromEntries(VALUES.map(([k])=>[k,""]));
+function newPatient(){
+  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
+    today:Object.assign({date:today(),verify:[{t:"",done:false}]},blankVals()),
+    prior:Object.assign({date:""},blankVals()),
+    problems:[{p:"",a:"",pl:""},{p:"",a:"",pl:""},{p:"",a:"",pl:""}]};
+  PT_INFO.concat(BACKGROUND).forEach(([k])=>p[k]="");
+  return p;
+}
+function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
+function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>a[k],o);t[last]=v}
+const P=()=>S.patients.find(p=>p.id===cur);
+/* per-field edit times, so two devices editing the same patient merge cleanly */
+const unitOf=k=>k.startsWith("problems.")?"problems":k.startsWith("today.verify.")?"today.verify":k;
+function markTs(k,p=P()){if(!p)return;p.ts=p.ts||{};p.ts[unitOf(k)]=Date.now()}
+
+/* ---------- crypto + storage (local only) ---------- */
+const te=new TextEncoder(), td=new TextDecoder();
+const b64=u=>{const a=new Uint8Array(u);let s="";for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode.apply(null,a.subarray(i,i+0x8000));return btoa(s)};
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const hasCrypto=()=>!!(window.crypto&&crypto.subtle);
+async function derive(pass,s){
+  const base=await crypto.subtle.importKey("raw",te.encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt:s,iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+function ls(){try{return window.localStorage}catch(e){return null}}
+async function saveNow(){
+  clearTimeout(saveT);saveT=null;
+  if(!S)return;const L=ls();if(!L){canStore=false;return}
+  const json=JSON.stringify(S);
+  try{
+    if(key){
+      const iv=crypto.getRandomValues(new Uint8Array(12));
+      const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,te.encode(json));
+      L.setItem(LS_ENC,JSON.stringify({salt:b64(salt),iv:b64(iv),ct:b64(ct)}));L.removeItem(LS_PLAIN);
+    }else{L.setItem(LS_PLAIN,json);L.removeItem(LS_ENC)}
+  }catch(e){canStore=false;alert("Couldn't save on this device: "+e.message)}
+}
+function save(){if(cur){const p=P();if(p)p.updated=Date.now()}if(S&&S.sync)S.sync.dirty=true;clearTimeout(saveT);saveT=setTimeout(saveNow,400);schedulePush()}
+
+/* ---------- boot ---------- */
+let pendingPair=null;
+function boot(){
+  const pm=location.hash.match(/pair=([A-Za-z0-9-]+)/);
+  if(pm){pendingPair=pm[1];history.replaceState(null,"",location.pathname+location.search)}
+  remoteWipeCheck();
+  const L=ls();
+  if(!L){canStore=false}
+  const enc=L&&L.getItem(LS_ENC), plain=L&&L.getItem(LS_PLAIN);
+  if(enc){show("ovLock");setTimeout(()=>$("lockP").focus(),50);return}
+  if(plain){try{S=JSON.parse(plain)}catch(e){S=null}}
+  if(S){start();return}
+  S={patients:[]};
+  if(hasCrypto()&&canStore){show("ovSetup")}else{start()}
+}
+function show(id){$(id).classList.remove("hidden")}
+function hide(id){$(id).classList.add("hidden")}
+$("setGo").onclick=async()=>{
+  const a=$("setP1").value,b=$("setP2").value;
+  if(a.length<4){$("setErr").textContent="Use at least 4 characters.";return}
+  if(a!==b){$("setErr").textContent="Passcodes don't match.";return}
+  salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(a,salt);
+  $("setP1").value=$("setP2").value="";hide("ovSetup");await saveNow();start();
+};
+$("setSkip").onclick=()=>{hide("ovSetup");start();saveNow()};
+async function unlock(){
+  const L=ls();const rec=JSON.parse(L.getItem(LS_ENC));
+  try{
+    const s=unb64(rec.salt);const k=await derive($("lockP").value,s);
+    const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(rec.iv)},k,unb64(rec.ct));
+    S=JSON.parse(td.decode(pt));key=k;salt=s;$("lockP").value="";$("lockErr").textContent="";hide("ovLock");start();
+  }catch(e){$("lockErr").textContent="Wrong passcode.";$("lockP").select()}
+}
+$("lockGo").onclick=unlock;
+$("lockP").addEventListener("keydown",e=>{if(e.key==="Enter")unlock()});
+$("lockWipe").onclick=()=>{if(confirm("Erase ALL rounds data on this device? This cannot be undone.")){wipe()}};
+function wipe(){const L=ls();if(L){L.removeItem(LS_ENC);L.removeItem(LS_PLAIN);L.removeItem(LS_VAULT)}S=null;key=null;salt=null;location.reload()}
+async function lock(){
+  if(!key)return;await saveNow();syncStop();S=null;key=null;salt=null;cur=null;
+  $("main").innerHTML="";$("tabs").innerHTML="";hide("menu");show("ovLock");
+}
+function start(){
+  if(!cur||!S.patients.some(p=>p.id===cur))cur=S.patients[0]?.id||null;
+  render();resetIdle();
+  if(!S.deleted)S.deleted={};
+  syncInit().then(handlePendingPair);
+}
+
+/* auto-lock: after LOCK_MIN minutes in background or idle */
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){hiddenAt=Date.now();if(saveT)saveNow()}
+  else if(key&&hiddenAt&&Date.now()-hiddenAt>LOCK_MIN*60e3){lock()}
+});
+window.addEventListener("pagehide",()=>{if(saveT)saveNow()});
+function resetIdle(){clearTimeout(idleT);if(key)idleT=setTimeout(lock,LOCK_MIN*60e3)}
+["pointerdown","keydown","scroll"].forEach(ev=>document.addEventListener(ev,resetIdle,{passive:true}));
+
+/* ---------- rendering ---------- */
+function progress(p){
+  const total=MEDS.length+EXAM.length+AP.length;
+  const done=Object.values(p.medsChk).filter(Boolean).length+Object.values(p.examChk).filter(Boolean).length+Object.values(p.apChk).filter(Boolean).length;
+  return Math.round(100*done/total);
+}
+function tabLabel(p,i){const n=(p.room||"").trim()||(p.name||"").trim().split(/[ ,]/)[0]||("Pt "+(i+1));return n.slice(0,14)}
+function renderTabs(){
+  $("tabs").innerHTML=S.patients.map((p,i)=>`<button class="tab ${p.id===cur?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
+}
+const ta=(path,label,ph="")=>`<label class="f"><span>${label}</span><textarea rows="1" data-k="${path}" placeholder="${esc(ph)}">${esc(getPath(P(),path))}</textarea></label>`;
+const tx=(path,label)=>`<label class="f"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(P(),path))}"></label>`;
+function chkList(group,items){
+  const p=P();
+  return items.map(([k,l])=>{
+    const on=!!p[group][k];
+    let lbl=esc(l);
+    if(group==="medsChk"&&k==="abx"){
+      lbl=`Abx: <span class="inline">day <input type="text" inputmode="numeric" data-k="abxDay" value="${esc(p.abxDay)}"> of <input type="text" inputmode="numeric" data-k="abxOf" value="${esc(p.abxOf)}"></span> <span class="inline">Stop <input class="w" type="text" data-k="abxStop" value="${esc(p.abxStop)}" placeholder="date"></span>`;
+    }
+    return `<label class="chk ${on?"done":""}"><input type="checkbox" data-k="${group}.${k}" ${on?"checked":""}><span class="lbl">${lbl}</span></label>`;
+  }).join("");
+}
+function examList(){
+  const p=P();
+  return EXAM.map(([k,l])=>{const s=p.examChk[k]||0;return `<button class="tri" data-act="tri" data-key="${k}" data-s="${s}"><span class="dot">${s===1?"✓":s===2?"!":""}</span><span>${esc(l)}</span></button>`}).join("");
+}
+function count(obj,n){return `${Object.values(obj).filter(Boolean).length}/${n}`}
+function valuesBlock(which){
+  const p=P(),v=p[which];
+  return `<div class="grid two">${VALUES.map(([k,l])=>ta(which+"."+k,l)).join("")}</div>`;
+}
+function render(){
+  const m0=$("main"),keepOpen=(P()&&m0.dataset.pid===cur)?[...m0.querySelectorAll("details")].map(d=>d.open):null;
+  renderTabs();
+  $("mLock").classList.toggle("hidden",!key);
+  $("mPass").textContent=key?"Change / remove passcode":"Set passcode";
+  $("storeNote").textContent=!canStore?"⚠️ This browser isn't allowing storage — data will be lost when you close the page.":key?"Saved on this device, encrypted with your passcode. Auto-locks after "+LOCK_MIN+" min away.":"Saved on this device without encryption. Set a passcode to encrypt it.";
+  const p=P();
+  if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Data stays in this browser on this device.<br>The page is blocked from making any network requests.</p></div>`;$("title").textContent="Rounds";return}
+  $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
+  const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem"><button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
+  $("main").innerHTML=`
+  <details open><summary>Patient info</summary><div class="body"><div class="grid two">
+    ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}${tx("code","Code status")}</div>
+    <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
+
+  <details><summary>Background</summary><div class="body"><div class="grid two">${BACKGROUND.map(([k,l])=>ta(k,l)).join("")}</div></div></details>
+
+  <details open><summary>Today's values — verified this AM</summary><div class="body">
+    <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
+    <label class="f"><span>Labs to verify before rounds</span></label>${verify}
+    <button class="add" data-act="addVerify">＋ Lab to verify</button>
+    <div style="height:10px"></div>${valuesBlock("today")}</div></details>
+
+  <details><summary>Prior values <span class="cnt">${p.prior.date?esc(p.prior.date):""}</span></summary><div class="body">
+    <div class="warnbar">⚠️ Trend / context only — DO NOT present as current</div>
+    ${valuesBlock("prior")}</div></details>
+
+  <details open><summary>Meds &amp; orders check <span class="cnt">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
+
+  <details open><summary>Exam checklist — usual suspects <span class="cnt">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
+    <p class="legend">Tap to cycle: blank → ✓ checked/unremarkable → ! abnormal → blank</p>
+    <div class="cols">${examList()}</div>
+    <div style="margin-top:8px">${ta("examNotes","Exam notes / abnormal findings")}</div></div></details>
+
+  <details open><summary>A/P checklist <span class="cnt">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
+
+  <details open><summary>Assessment &amp; plan</summary><div class="body">
+    ${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
+    <button class="add" data-act="addProb">＋ Problem</button></div></details>
+
+  <div class="toolbar noprint">
+    <button class="btn" data-act="newDay">☀️ New day for this patient</button>
+    <button class="btn danger" data-act="delPt">Remove patient</button>
+  </div>
+  <p class="meta noprint">"New day" moves today's values into Prior, clears today's values, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
+  $("main").dataset.pid=p.id;
+  if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
+  $("main").querySelectorAll("textarea").forEach(grow);
+}
+function grow(t){t.style.height="auto";t.style.height=(t.scrollHeight+2)+"px"}
+
+/* ---------- events ---------- */
+$("main").addEventListener("input",e=>{
+  const t=e.target,k=t.dataset.k;if(!k)return;
+  setPath(P(),k,t.type==="checkbox"?t.checked:t.value);markTs(k);
+  if(t.tagName==="TEXTAREA")grow(t);
+  if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
+  if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
+  save();
+});
+$("main").addEventListener("change",e=>{if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
+function updateCounts(){
+  const p=P();const c=[count(p.medsChk,MEDS.length),count(p.examChk,EXAM.length),count(p.apChk,AP.length)];
+  const sums=[...$("main").querySelectorAll("summary .cnt")].slice(1);sums.forEach((s,i)=>s.textContent=c[i]);renderTabs();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;
+  const a=b.dataset.act,p=S&&cur?P():null,i=+b.dataset.i;
+  const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
+  switch(a){
+    case"tab":cur=b.dataset.id;render();scrollTo(0,0);break;
+    case"addPt":{const n=newPatient();S.patients.push(n);cur=n.id;render();scrollTo(0,0);save();setTimeout(()=>{const f=document.querySelector('[data-k="name"]');f&&f.focus()},50);break}
+    case"delPt":if(confirm("Remove "+(p.name||"this patient")+" and all their notes?")){S.deleted=S.deleted||{};S.deleted[cur]=Date.now();S.patients=S.patients.filter(x=>x.id!==cur);cur=S.patients[0]?.id||null;render();save()}break;
+    case"tri":{const s=((p.examChk[b.dataset.key]||0)+1)%3;p.examChk[b.dataset.key]=s;markTs("examChk."+b.dataset.key);b.dataset.s=s;b.querySelector(".dot").textContent=s===1?"✓":s===2?"!":"";updateCounts();save();break}
+    case"addVerify":markTs("today.verify");p.today.verify.push({t:"",done:false});rerender();break;
+    case"delVerify":markTs("today.verify");p.today.verify.splice(i,1);if(!p.today.verify.length)p.today.verify.push({t:"",done:false});rerender();break;
+    case"addProb":markTs("problems");p.problems.push({p:"",a:"",pl:""});rerender();break;
+    case"delProb":{const pr=p.problems[i];if((pr.p||pr.a||pr.pl)&&!confirm("Remove problem "+(i+1)+(pr.p?" ("+pr.p+")":"")+"?"))break;markTs("problems");p.problems.splice(i,1);rerender();break}
+    case"up":if(i>0){markTs("problems");[p.problems[i-1],p.problems[i]]=[p.problems[i],p.problems[i-1]];rerender()}break;
+    case"down":if(i<p.problems.length-1){markTs("problems");[p.problems[i+1],p.problems[i]]=[p.problems[i],p.problems[i+1]];rerender()}break;
+    case"newDay":if(confirm("Start a new day for this patient? Today's values move to Prior and checklists reset.")){rollover(p);rerender()}break;
+    case"newDayAll":hide("menu");if(S.patients.length&&confirm("Start a new day for ALL "+S.patients.length+" patients?")){S.patients.forEach(rollover);rerender()}break;
+    case"menu":show("menu");break;
+    case"closeMenu":hide("menu");break;
+    case"print":hide("menu");document.querySelectorAll("details").forEach(d=>d.open=true);document.querySelectorAll("textarea").forEach(grow);setTimeout(()=>print(),50);break;
+    case"lockNow":lock();break;
+    case"passcode":hide("menu");passcodeFlow();break;
+    case"syncSheet":hide("menu");openSync();break;
+    case"wipe":if(confirm("Erase ALL rounds data on THIS device? "+(S&&S.sync?"Your other synced device and the encrypted synced copy are not affected (use Sync devices → Erase everywhere for that). ":"")+"This cannot be undone.")&&confirm("Really erase everything?"))wipe();break;
+  }
+});
+$("menu").addEventListener("click",e=>{if(e.target.id==="menu")hide("menu")});
+function rollover(p){
+  const t=p.today,hasAny=VALUES.some(([k])=>(t[k]||"").trim());
+  if(hasAny){p.prior=Object.assign({date:t.date},Object.fromEntries(VALUES.map(([k])=>[k,t[k]||""])))}
+  p.today=Object.assign({date:today(),verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
+  if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
+  p.medsChk={};p.examChk={};p.apChk={};p.examNotes="";p.updated=Date.now();p.epoch=Date.now();p.ts={};
+}
+async function passcodeFlow(){
+  if(!hasCrypto()){alert("Encryption isn't available in this browser context. Open the page over https (or in Chrome/Firefox from a file) to use a passcode.");return}
+  if(key){
+    const choice=prompt("Type a NEW passcode to change it, or leave blank and press OK to REMOVE the passcode (data will be stored unencrypted).");
+    if(choice===null)return;
+    if(choice===""){if(S.sync){alert("Turn off sync first (Sync devices → Turn off on this device). Sync requires a passcode.");return}if(confirm("Remove passcode? Saved data will no longer be encrypted.")){key=null;salt=null;await saveNow();render()}return}
+    if(choice.length<4){alert("Use at least 4 characters.");return}
+    if(prompt("Confirm new passcode")!==choice){alert("Didn't match — passcode unchanged.");return}
+    salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(choice,salt);await saveNow();render();alert("Passcode changed.");
+  }else{
+    const a=prompt("New passcode (at least 4 characters). No recovery if forgotten.");if(a===null)return;
+    if(a.length<4){alert("Use at least 4 characters.");return}
+    if(prompt("Confirm passcode")!==a){alert("Didn't match.");return}
+    salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(a,salt);await saveNow();render();resetIdle();alert("Passcode set. Data is now encrypted on this device.");
+  }
+}
+
+/* ================= END-TO-END ENCRYPTED SYNC =================
+   The pairing code (120 random bits) never leaves your devices except inside the QR / typed code.
+   From it we derive (a) the AES-GCM key that encrypts everything before upload and
+   (b) a vault id (a hash) that tells the server where to keep the scrambled blob.
+   The server never gets the code or the key, so it cannot read anything. */
+const B32="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function toB32(bytes){let bits=0,val=0,out="";for(const b of bytes){val=(val<<8)|b;bits+=8;while(bits>=5){out+=B32[(val>>>(bits-5))&31];bits-=5}}if(bits>0)out+=B32[(val<<(5-bits))&31];return out}
+function fromB32(s){let bits=0,val=0;const out=[];for(const ch of s){const i=B32.indexOf(ch);if(i<0)return null;val=(val<<5)|i;bits+=5;if(bits>=8){out.push((val>>>(bits-8))&255);bits-=8}}return new Uint8Array(out)}
+function normCode(s){return String(s||"").toUpperCase().replace(/0/g,"O").replace(/1/g,"I").replace(/8/g,"B").replace(/[^A-Z2-7]/g,"")}
+const fmtCode=c=>c.match(/.{1,4}/g).join("-");
+const hex=buf=>[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+let syncKey=null, vaultId=null, syncBusy=false, syncAgain=false, pollT=null, pushT=null, syncStatus="off", lastSyncAt=0;
+
+async function syncInit(){
+  if(!S||!S.sync||!key||!hasCrypto()){syncKey=null;setSync("off");return}
+  const raw=fromB32(S.sync.secret);
+  const base=await crypto.subtle.importKey("raw",raw,"HKDF",false,["deriveKey","deriveBits"]);
+  syncKey=await crypto.subtle.deriveKey({name:"HKDF",hash:"SHA-256",salt:te.encode("rounds-sync-v1"),info:te.encode("encrypt")},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+  vaultId=hex(await crypto.subtle.deriveBits({name:"HKDF",hash:"SHA-256",salt:te.encode("rounds-sync-v1"),info:te.encode("vault-id")},base,256));
+  try{ls().setItem(LS_VAULT,vaultId)}catch(e){}
+  clearInterval(pollT);pollT=setInterval(()=>{if(!document.hidden)sync()},POLL_S*1000);
+  await sync();
+}
+function syncStop(){clearInterval(pollT);clearTimeout(pushT);pollT=null;syncKey=null;setSync("off")}
+function schedulePush(){if(!syncKey)return;clearTimeout(pushT);pushT=setTimeout(sync,1500)}
+function setSync(st){
+  syncStatus=st;const el=$("syncPill");
+  el.classList.toggle("hidden",st==="off");el.classList.toggle("bad",st==="offline");
+  el.textContent=st==="busy"?"⟳ Syncing":st==="offline"?"⚠ Offline":st==="ok"?"✓ Synced":"";
+  if(!$("syncSheet").classList.contains("hidden"))renderSyncBox();
+}
+async function encBlob(str){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},syncKey,te.encode(str));return b64(iv)+"."+b64(ct)}
+async function decBlob(blob){const [iv,ct]=blob.split(".");return td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(iv)},syncKey,unb64(ct)))}
+const payload=()=>JSON.stringify({patients:S.patients,deleted:S.deleted||{}});
+
+/* per-patient merge: newest edit wins; deletions are remembered for 30 days */
+function merge(local,remote){
+  const cutoff=Date.now()-30*864e5, deleted={};
+  for(const src of [remote.deleted||{},local.deleted||{}])for(const [id,t] of Object.entries(src))if(t>cutoff&&!(deleted[id]>=t))deleted[id]=t;
+  const L=new Map(local.patients.map(p=>[p.id,p])), R=new Map(remote.patients.map(p=>[p.id,p]));
+  const order=[...remote.patients.map(p=>p.id),...local.patients.map(p=>p.id).filter(id=>!R.has(id))];
+  const patients=[];
+  for(const id of order){
+    const l=L.get(id),r=R.get(id);
+    const pick=!l?r:!r?l:mergePatient(l,r);
+    if(deleted[id]&&deleted[id]>=(pick.updated||0))continue;
+    patients.push(pick);
+  }
+  return {patients,deleted};
+}
+const clone=o=>o===undefined?undefined:JSON.parse(JSON.stringify(o));
+function mergePatient(l,r){
+  // Same patient on both sides. A "new day" (epoch) on one side wins over the older day;
+  // otherwise start from the more recently edited copy and pull in any field edited more recently on the other.
+  let base,other;
+  if((l.epoch||0)!==(r.epoch||0)){[base,other]=(l.epoch||0)>(r.epoch||0)?[l,r]:[r,l]}
+  else{[base,other]=(l.updated||0)>(r.updated||0)?[l,r]:[r,l]}
+  const out=clone(base);out.ts=out.ts||{};
+  for(const [f,t] of Object.entries(other.ts||{})){
+    if(t>(out.ts[f]||0)&&t>(out.epoch||0)){const v=getPath(other,f);try{setPath(out,f,clone(v));out.ts[f]=t}catch(e){}}
+  }
+  out.updated=Math.max(l.updated||0,r.updated||0);
+  return out;
+}
+async function sync(){
+  if(!syncKey||!S)return;
+  if(syncBusy){syncAgain=true;return}
+  syncBusy=true;if(syncStatus!=="ok"||S.sync.dirty)setSync("busy");
+  const vid=vaultId;
+  try{
+    for(let attempt=0;attempt<5;attempt++){
+      const r=await fetch(`/api/v/${vid}?since=${S.sync.rev}`,{cache:"no-store"});
+      if(r.status===410){remoteWiped();return}
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      const d=await r.json();
+      if(!S||vid!==vaultId)return;          // locked or unpaired meanwhile
+      let needPush=!!S.sync.dirty;
+      if(!d.same){
+        if(d.blob){
+          const remote=JSON.parse(await decBlob(d.blob));
+          const before=payload(), merged=merge({patients:S.patients,deleted:S.deleted},remote);
+          S.patients=merged.patients;S.deleted=merged.deleted;
+          if(!S.patients.some(p=>p.id===cur))cur=S.patients[0]?.id||null;
+          if(payload()!==before)softRender();
+          needPush=JSON.stringify(merged)!==JSON.stringify({patients:remote.patients,deleted:remote.deleted||{}});
+        }else needPush=S.patients.length>0||needPush;
+        S.sync.rev=d.rev;
+      }
+      if(!needPush){S.sync.dirty=false;break}
+      const snap=payload();
+      const pr=await fetch(`/api/v/${vid}`,{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({baseRev:S.sync.rev,blob:await encBlob(snap)})});
+      if(pr.status===409)continue;            // someone else saved first: pull, merge, retry
+      if(pr.status===410){remoteWiped();return}
+      if(!pr.ok)throw new Error("HTTP "+pr.status);
+      S.sync.rev=(await pr.json()).rev;
+      if(payload()===snap)S.sync.dirty=false;
+      break;
+    }
+    lastSyncAt=Date.now();setSync("ok");saveNow();
+  }catch(e){setSync("offline")}
+  finally{syncBusy=false;if(syncAgain){syncAgain=false;setTimeout(sync,200)}}
+}
+function softRender(){
+  const a=document.activeElement,k=a&&a.dataset?a.dataset.k:null;let ss=null,se=null;
+  if(k){try{ss=a.selectionStart;se=a.selectionEnd}catch(e){}}
+  const y=scrollY;render();scrollTo(0,y);
+  if(k){const n=$("main").querySelector(`[data-k="${k}"]`);if(n){n.focus({preventScroll:true});try{if(ss!=null)n.setSelectionRange(ss,se)}catch(e){}}}
+}
+function remoteWiped(){
+  const L=ls();if(L){L.removeItem(LS_ENC);L.removeItem(LS_PLAIN);L.removeItem(LS_VAULT)}
+  S=null;key=null;syncStop();
+  alert("Your synced rounds data was erased from another device, so this device's copy has been erased too.");
+  location.reload();
+}
+/* a locked device still checks for a remote erase (the vault id reveals nothing) */
+async function remoteWipeCheck(){
+  const L=ls(),vid=L&&L.getItem(LS_VAULT);if(!vid)return;
+  try{const r=await fetch(`/api/v/${vid}?check=1`,{cache:"no-store"});if(r.status===410)remoteWiped()}catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&syncKey)sync()});
+window.addEventListener("online",()=>{if(syncKey)sync()});
+
+async function ensurePasscode(){
+  if(key)return true;
+  if(!hasCrypto()){alert("Sync needs encryption, which this browser context doesn't support.");return false}
+  alert("Sync needs a passcode on this device first, so the sync key is stored encrypted.");
+  await passcodeFlow();return !!key;
+}
+async function startSync(){
+  if(!(await ensurePasscode()))return;
+  S.sync={secret:toB32(crypto.getRandomValues(new Uint8Array(15))),rev:0,dirty:true};
+  await saveNow();await syncInit();renderSyncBox();
+}
+async function joinSync(code){
+  const c=normCode(code);
+  if(c.length!==24||!fromB32(c)){alert("That code doesn't look right — it should be 24 letters/numbers.");return false}
+  if(!(await ensurePasscode()))return false;
+  S.sync={secret:c,rev:0,dirty:S.patients.length>0};
+  await saveNow();await syncInit();renderSyncBox();return true;
+}
+async function handlePendingPair(){
+  if(!pendingPair||!S)return;const c=normCode(pendingPair);pendingPair=null;
+  if(S.sync&&S.sync.secret===c){openSync();return}
+  if(!confirm(S.sync?"Switch this device to the new sync link? (It will stop syncing with the old one.)":"Link this device to your other device for sync?"))return;
+  if(S.sync)syncStop();
+  if(await joinSync(c))openSync();
+}
+function openSync(){renderSyncBox();show("syncSheet")}
+function renderSyncBox(){
+  const box=$("syncBox");if(!S){box.innerHTML="";return}
+  let h=`<h3>🔄 Sync devices</h3>`;
+  if(!S.sync){
+    h+=`<p class="note" style="margin:0 0 8px">End-to-end encrypted: notes are locked on this device before upload, and only your paired devices hold the key. The server stores scrambled data it can't read, and deletes it after 30 days without use.</p>
+    <button class="btn pri" data-sync="start">Turn on sync (first device)</button>
+    <p class="note">Already turned on elsewhere? Scan its QR code, or type its code here:</p>
+    <input type="text" id="joinCode" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off" spellcheck="false">
+    <button class="btn" data-sync="join">Link this device</button>`;
+  }else{
+    const code=fmtCode(S.sync.secret), url=location.origin+"/#pair="+code;
+    let svg="";try{const q=qrcode(0,"M");q.addData(url);q.make();svg=q.createSvgTag({cellSize:4,margin:0,scalable:true})}catch(e){}
+    const when=lastSyncAt?new Date(lastSyncAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"—";
+    h+=`<p class="note" style="margin:0">Status: <b>${syncStatus==="ok"?"Synced":syncStatus==="busy"?"Syncing…":syncStatus==="offline"?"Offline — will sync when back online":"Off"}</b> · last ${when}</p>
+    <p class="note">To add your other device: scan this with its camera, or type the code into its Sync screen. Anyone with this code can read your synced notes — don't share it.</p>
+    <details style="margin:6px 0"><summary>Show pairing QR &amp; code</summary><div class="body"><div class="qr">${svg}</div><div class="code">${esc(code)}</div></div></details>
+    <button class="btn" data-sync="now">Sync now</button>
+    <button class="btn" data-sync="off">Turn off sync on this device</button>
+    <button class="btn danger" data-sync="erase">Erase synced data everywhere</button>`;
+  }
+  h+=`<button class="btn" data-sync="close">Close</button>`;
+  box.innerHTML=h;
+}
+$("syncSheet").addEventListener("click",async e=>{
+  if(e.target.id==="syncSheet"){hide("syncSheet");return}
+  const b=e.target.closest("[data-sync]");if(!b)return;const a=b.dataset.sync;
+  if(a==="close")hide("syncSheet");
+  else if(a==="start")startSync();
+  else if(a==="join")joinSync($("joinCode").value);
+  else if(a==="now")sync();
+  else if(a==="off"){if(confirm("Stop syncing on this device? Notes already here stay here.")){syncStop();S.sync=null;try{ls().removeItem(LS_VAULT)}catch(e){}await saveNow();renderSyncBox()}}
+  else if(a==="erase"){
+    if(!confirm("Erase the synced copy AND the notes on every paired device (each erases itself next time it opens or syncs)?")||!confirm("This can't be undone. Erase everywhere?"))return;
+    try{const r=await fetch(`/api/v/${vaultId}`,{method:"DELETE"});if(!r.ok&&r.status!==410)throw 0}catch(err){alert("Couldn't reach the sync server — nothing was erased. Try again when online.");return}
+    wipe();
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

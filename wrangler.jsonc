@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rounds",
+  "main": "src/index.js",
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "durable_objects": {
+    "bindings": [{ "name": "VAULT", "class_name": "Vault" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Vault"] }],
+  // No logs of requests are kept by this Worker.
+  "observability": { "enabled": false }
+}

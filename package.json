@@ -1,0 +1,20 @@
+{
+  "name": "rounds",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "wrangler dev",
+    "deploy": "node build.js && wrangler deploy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "qrcode-generator": "^1.5.2"
+  },
+  "private": true,
+  "devDependencies": {
+    "wrangler": "^4.160.0"
+  }
+}
