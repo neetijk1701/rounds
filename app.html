@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <!-- Hard block on all network access: nothing typed here can be sent anywhere. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1f3a5f">
+<meta name="apple-mobile-web-app-title" content="Rounds">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-180.png">
 <title>Rounds</title>
 <style>
 :root{--bg:#f4f6f9;--card:#fff;--ink:#1b2430;--mute:#667085;--line:#d9dee6;--acc:#1f3a5f;--acc2:#2f6fb3;--ok:#1e8e5a;--warn:#b54708;--bad:#c0392b;--warnbg:#fff4e5}
@@ -29,6 +32,7 @@ header{position:sticky;top:0;z-index:5;background:var(--acc);color:#fff;padding:
 .tab{flex:none;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:999px;padding:6px 12px;font-size:14px;white-space:nowrap}
 .tab.on{background:#fff;color:#1f3a5f;font-weight:600}
 .tab small{opacity:.75;margin-left:4px}
+.tab.all{font-weight:700}
 main{max-width:900px;margin:0 auto;padding:10px 10px 90px}
 details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
 summary{list-style:none;padding:11px 12px;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);display:flex;align-items:center;gap:8px}
@@ -97,6 +101,55 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+/* lab boxes */
+.fishes{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0 10px}
+.fb{border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;align-items:stretch}
+.fbh{font-size:12px;font-weight:600;color:var(--mute);margin:0 0 4px;width:100%}
+.fwrap{display:flex;flex-direction:column}
+.lc{display:flex;flex-direction:column;align-items:center;padding:3px 5px;min-width:62px}
+.lc .ln{font-size:11px;font-weight:700;color:var(--mute)}
+.lc input{width:58px!important;text-align:center;padding:4px 2px!important;font-size:16px}
+.lc .trw,.lc .tr{font-size:11px;color:var(--mute);min-height:15px;white-space:nowrap}
+.lc.hi input,.lc.hi b{color:var(--bad);font-weight:700}
+.lc.lo input,.lc.lo b{color:var(--acc2);font-weight:700}
+.bmp .g{display:grid;grid-template-columns:repeat(3,auto)}
+.bmp .g .lc:nth-child(-n+3){border-bottom:2px solid var(--line)}
+.bmp .g .lc:not(:nth-child(3n)){border-right:2px solid var(--line)}
+.bmp .glu{display:flex;align-items:center;border-left:2px solid var(--line);margin-left:2px;padding-left:2px}
+.cbc{align-items:center}
+.cbc .mid{display:flex;flex-direction:column;border-left:2px solid var(--line);border-right:2px solid var(--line);margin:0 2px}
+.cbc .mid .lc:first-child{border-bottom:2px solid var(--line)}
+.xtra{gap:0}
+.xtra .lc:not(:last-child){border-right:2px solid var(--line)}
+/* to-dos */
+.vrow.todo.done input[type=text]{text-decoration:line-through;color:var(--mute)}
+/* present view */
+.pres{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:18px;line-height:1.5}
+.pres .ph1{font-size:22px;font-weight:800;margin:0 0 2px}
+.pres .ph2{color:var(--mute);font-size:15px;margin-bottom:6px}
+.ps{display:grid;grid-template-columns:1fr;gap:2px;padding:10px 0;border-top:1px solid var(--line)}
+@media(min-width:700px){.ps{grid-template-columns:130px 1fr;gap:14px}}
+.ps h4{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);padding-top:5px}
+.ps p{margin:0 0 4px}
+.ps ul{margin:2px 0 4px;padding-left:20px}
+.oldtxt{color:var(--mute);font-style:italic}
+.stale{display:inline-block;font-size:12px;font-style:normal;font-weight:700;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.pp{margin:0 0 10px}
+.pp .plan{margin-left:14px}
+.abn{color:var(--bad)}
+.pnav{display:flex;gap:8px;margin-top:12px}
+.pnav .btn{flex:1}
+.pres .fb{font-size:15px}
+/* census */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+.card .ch{display:flex;gap:8px;align-items:baseline;width:100%;background:none;border:0;padding:0;color:var(--ink);text-align:left;font-size:16px}
+.card .ch .nm{flex:1}
+.card .pct{color:var(--mute);font-size:12px}
+.card .ol{margin:4px 0;font-size:15px}
+.bdg{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:1px 7px;margin:2px 4px 2px 0;background:var(--warnbg);color:var(--warn)}
+.bdg.cs{background:rgba(127,127,127,.14);color:var(--mute)}
+.card .chk{padding:5px 2px}
+.sumline{color:var(--mute);font-size:14px;margin:4px 2px}
 @media print{
   header,.toolbar,.add,.x,.mini,.sheet,.ov,.noprint{display:none!important}
   body{background:#fff;color:#000;font-size:11px}
@@ -114,6 +167,7 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
   <div class="hrow">
     <h1 id="title">Rounds</h1>
     <button class="pill hidden" id="syncPill" data-act="syncSheet"></button>
+    <button class="hbtn hidden" id="presBtn" data-act="present">▶ Present</button>
     <button class="hbtn" data-act="addPt">＋ Patient</button>
     <button class="hbtn" data-act="menu" aria-label="Menu">☰</button>
   </div>
@@ -163,6 +217,10 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 "use strict";
 /* ---------- content from Outline v3 ---------- */
 const PT_INFO=[["name","Name, Age"],["room","Room"],["on","O/N"],["hpi","HPI"],["ros","ROS"],["pcp","PCP"],["code","Code status"]];
+const BMP=[["na","Na",135,145],["cl","Cl",98,107],["bun","BUN",7,20],["k","K",3.5,5.0],["co2","CO₂",22,29],["cr","Cr",0.6,1.3],["glu","Glu",70,180]];
+const CBC=[["wbc","WBC",4,11],["hgb","Hgb",12,17.5],["hct","Hct",36,50],["plt","Plt",150,400]];
+const XTRA=[["ca","Ca",8.5,10.5],["mg","Mg",1.7,2.4],["phos","Phos",2.5,4.5]];
+const ANALYTES=[...BMP,...CBC,...XTRA], AN=Object.fromEntries(ANALYTES.map(a=>[a[0],a]));
 const BACKGROUND=[["pmh","PMH"],["psh","PSH"],["allergies","Drug Allergies"],["meds","Meds"],["social","Social Hx"],["family","Family Hx"]];
 const VALUES=[["vitals","Vital signs"],["exam","Exam"],["io","I/O"],["labs","Labs"],["cultures","Cultures"],["path","Pathology"],["imaging","Imaging"],["consults","Consults"]];
 const MEDS=[["diet","Diet / NPO status: confirmed?"],["dvt","DVT prophylaxis: on it?"],["bowel","Bowel regimen if on opioids?"],["newmeds","New meds: indication clear?"],["abx","ABX"],["renal","Renal/hepatic dose adjustment?"],["home","Home meds: still holding?"],["prn","PRN usage overnight?"],["gi","GI prophylaxis if indicated?"]];
@@ -171,6 +229,7 @@ const AP=[["newprob","New problems overnight? → ADD TO LIST"],["each","Each pr
 
 /* ---------- state ---------- */
 const LS_ENC="rounds.enc.v1", LS_PLAIN="rounds.plain.v1", LS_VAULT="rounds.vault.v1", LOCK_MIN=5, POLL_S=10;
+let mode="edit", listOn=false;
 let S=null, cur=null, key=null, salt=null, hiddenAt=0, idleT=null, saveT=null, canStore=true;
 const $=id=>document.getElementById(id);
 const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -178,7 +237,7 @@ const uid=()=>Math.random().toString(36).slice(2,10);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const blankVals=()=>Object.fromEntries(VALUES.map(([k])=>[k,""]));
 function newPatient(){
-  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
+  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,todos:[],examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
     today:Object.assign({date:today(),verify:[{t:"",done:false}]},blankVals()),
     prior:Object.assign({date:""},blankVals()),
     problems:[{p:"",a:"",pl:""},{p:"",a:"",pl:""},{p:"",a:"",pl:""}]};
@@ -189,7 +248,7 @@ function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
 function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>(a[k]==null&&(a[k]={}),a[k]),o);t[last]=v}
 const P=()=>S.patients.find(p=>p.id===cur);
 /* per-field edit times, so two devices editing the same patient merge cleanly */
-const unitOf=k=>k.startsWith("problems.")?"problems":k.startsWith("today.verify.")?"today.verify":k;
+const unitOf=k=>k.startsWith("problems.")?"problems":k.startsWith("today.verify.")?"today.verify":k.startsWith("todos.")?"todos":k;
 function markTs(k,p=P()){if(!p)return;p.ts=p.ts||{};p.ts[unitOf(k)]=Date.now()}
 
 /* ---------- crypto + storage (local only) ---------- */
@@ -281,7 +340,7 @@ function progress(p){
 }
 function tabLabel(p,i){const n=(p.room||"").trim()||(p.name||"").trim().split(/[ ,]/)[0]||("Pt "+(i+1));return n.slice(0,14)}
 function renderTabs(){
-  $("tabs").innerHTML=S.patients.map((p,i)=>`<button class="tab ${p.id===cur?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
+  $("tabs").innerHTML=(S.patients.length?`<button class="tab all ${listOn?"on":""}" data-act="list">▤ All</button>`:"")+S.patients.map((p,i)=>`<button class="tab ${p.id===cur&&!listOn?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
 }
 const ta=(path,label,ph="")=>`<label class="f"><span>${label}</span><textarea rows="1" data-k="${path}" placeholder="${esc(ph)}">${esc(getPath(P(),path))}</textarea></label>`;
 const tx=(path,label)=>`<label class="f"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(P(),path))}"></label>`;
@@ -313,20 +372,31 @@ function valuesBlock(which){
 /* Move today's values into Prior (per field). Blank fields are skipped so older Prior values aren't wiped. */
 let undoSnap=null,toastT=null;
 function moveValues(p,keys,track=true){
-  const moved=keys.filter(k=>(p.today[k]||"").trim());
+  const labsBoxes=keys.includes("labs")&&hasLabs(p,"today");
+  const moved=keys.filter(k=>(p.today[k]||"").trim()||(k==="labs"&&labsBoxes));
   if(!moved.length)return [];
-  if(track)undoSnap={pid:p.id,keys:moved,today:moved.map(k=>p.today[k]),prior:moved.map(k=>p.prior[k]),dates:moved.map(k=>(p.prior.dates||{})[k])};
+  if(track)undoSnap={pid:p.id,keys:moved,today:moved.map(k=>p.today[k]),prior:moved.map(k=>p.prior[k]),dates:moved.map(k=>(p.prior.dates||{})[k]),
+    lab:clone({t:p.today.lab||{},p:p.prior.lab||{},d:p.prior.labDates||{}}),examOld:p.examOld};
   p.prior.dates=p.prior.dates||{};
+  const d=p.today.date||today();
   for(const k of moved){
-    p.prior[k]=p.today[k];p.prior.dates[k]=p.today.date||today();p.today[k]="";
-    if(track){markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)}
+    if((p.today[k]||"").trim()){p.prior[k]=p.today[k];p.prior.dates[k]=d;p.today[k]="";
+      if(track){markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)}}
+    if(k==="exam"&&p.examOld){p.examOld=false;if(track)markTs("examOld",p)}
   }
+  if(labsBoxes){p.today.lab=p.today.lab||{};p.prior.lab=p.prior.lab||{};p.prior.labDates=p.prior.labDates||{};
+    for(const [a] of ANALYTES){const v=String(p.today.lab[a]??"").trim();if(!v)continue;
+      p.prior.lab[a]=p.today.lab[a];p.prior.labDates[a]=d;p.today.lab[a]="";
+      if(track){markTs("today.lab."+a,p);markTs("prior.lab."+a,p);markTs("prior.labDates."+a,p)}}}
   return moved;
 }
 function undoMove(){
   const u=undoSnap;undoSnap=null;hideToast();if(!u)return;
   const p=S.patients.find(x=>x.id===u.pid);if(!p)return;
   p.prior.dates=p.prior.dates||{};
+  if(u.lab){p.today.lab=u.lab.t;p.prior.lab=u.lab.p;p.prior.labDates=u.lab.d;
+    for(const [a] of ANALYTES){markTs("today.lab."+a,p);markTs("prior.lab."+a,p);markTs("prior.labDates."+a,p)}}
+  if(u.examOld!==undefined){p.examOld=u.examOld;markTs("examOld",p)}
   u.keys.forEach((k,i)=>{p.today[k]=u.today[i];p.prior[k]=u.prior[i];if(u.dates[i]===undefined)delete p.prior.dates[k];else p.prior.dates[k]=u.dates[i];markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)});
   if(p.id===cur){const y=scrollY;render();scrollTo(0,y)}save();
 }
@@ -335,21 +405,113 @@ function toast(msg,undo){
   clearTimeout(toastT);toastT=setTimeout(hideToast,undo?8000:2500);
 }
 function hideToast(){$("toast").classList.add("hidden")}
+/* ---------- lab boxes ---------- */
+const num=v=>{const m=String(v??"").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):NaN};
+function flag(a,v){const n=num(v),x=AN[a];if(isNaN(n))return"";return n<x[2]?"lo":n>x[3]?"hi":""}
+function trend(p,a){
+  const t=getPath(p,"today.lab."+a),pv=getPath(p,"prior.lab."+a),nt=num(t),np=num(pv);
+  if(isNaN(np))return"";
+  if(isNaN(nt))return "prev "+esc(pv);
+  const d=nt-np;return (Math.abs(d)<1e-9?"→ ":d>0?"↑ ":"↓ ")+esc(pv);
+}
+const hasLabs=(p,which)=>ANALYTES.some(([a])=>String(getPath(p,which+".lab."+a)??"").trim());
+function priorLabDate(p){const d=Object.values((p.prior&&p.prior.labDates)||{}).filter(Boolean).sort();return d.length?d[d.length-1]:""}
+function lcell(p,which,a,ro){
+  const v=getPath(p,which+".lab."+a)??"",fl=flag(a,v),lab=esc(AN[a][1]);
+  if(ro)return `<div class="lc ${fl}"><span class="ln">${lab}</span><b>${esc(v)||"—"}</b><span class="tr">${trend(p,a)}</span></div>`;
+  return `<div class="lc ${fl}"><span class="ln">${lab}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${which}.lab.${a}" data-lab="${a}" value="${esc(v)}">${which==="today"?`<span class="trw" data-tr="${a}">${trend(p,a)}</span>`:""}</div>`;
+}
+function fish(p,which,ro){
+  const c=a=>lcell(p,which,a,ro);
+  const any=keys=>!ro||keys.some(a=>String(getPath(p,which+".lab."+a)??"").trim());
+  const pd=priorLabDate(p),hint=which==="today"&&pd&&!ro?` · arrows vs ${esc(mmdd(pd))}`:"";
+  return `<div class="fbh">BMP · CBC · Ca/Mg/Phos${hint}</div><div class="fishes">
+    ${any(BMP.map(x=>x[0]))?`<div class="fb bmp"><div class="g">${c("na")}${c("cl")}${c("bun")}${c("k")}${c("co2")}${c("cr")}</div><div class="glu">${c("glu")}</div></div>`:""}
+    ${any(CBC.map(x=>x[0]))?`<div class="fb cbc">${c("wbc")}<div class="mid">${c("hgb")}${c("hct")}</div>${c("plt")}</div>`:""}
+    ${any(XTRA.map(x=>x[0]))?`<div class="fb xtra">${c("ca")}${c("mg")}${c("phos")}</div>`:""}</div>`;
+}
+
+/* ---------- presenting view ---------- */
+function renderPresent(p){
+  const T=p.today||{},txt=v=>String(v||"").trim()?`<p>${esc(v).replace(/\n/g,"<br>")}</p>`:"";
+  const sec=(label,html)=>html&&html.trim()?`<section class="ps"><h4>${label}</h4><div>${html}</div></section>`:"";
+  const stale=d=>`<span class="stale">from ${esc(mmdd(d)||"yesterday")} — not updated</span>`;
+  const unv=(T.verify||[]).filter(v=>v.t.trim()&&!v.done).map(v=>esc(v.t));
+  const abnL=EXAM.filter(([k])=>p.examChk[k]===2).map(([,l])=>esc(l.split(":")[0].replace(/\?$/,"").trim()));
+  const abn=abnL.length?`<b>Flagged:</b> ${abnL.join(", ")}`:"";
+  const probs=p.problems.filter(pr=>(pr.p+pr.a+pr.pl).trim()).map((pr,i)=>{const old=pr.old&&Object.keys(pr.old).length;
+    return `<div class="pp ${old?"oldtxt":""}"><b>${i+1}. ${esc(pr.p)||"(untitled)"}</b>${old?stale(p.apFrom):""}${pr.a.trim()?`<div>${esc(pr.a).replace(/\n/g,"<br>")}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("");
+  const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}</li>`).join("");
+  const exam=(p.examOld&&String(T.exam||"").trim()?`<span class="stale">copied from ${esc(mmdd(p.examFrom)||"yesterday")} — re-examine</span>`:"")+
+    `<div class="${p.examOld?"oldtxt":""}">${txt(T.exam)}</div>`+(abn?`<p class="abn">${abn}</p>`:"")+`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`;
+  const i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1];
+  $("main").innerHTML=`<div class="pres">
+    <div class="ph1">${esc(p.name)||"Patient"}</div>
+    <div class="ph2">${[p.room&&"Rm "+esc(p.room),p.code&&"Code: "+esc(p.code),T.date&&esc(mmdd(T.date))].filter(Boolean).join(" · ")}</div>
+    ${unv.length?`<div class="warnbar">Not verified yet: ${unv.join(", ")}</div>`:""}
+    ${sec("One-liner",p.oneliner.trim()?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")}
+    ${sec("Overnight",txt(p.on))}
+    ${sec("Vitals",txt(T.vitals))}
+    ${sec("I/O",txt(T.io))}
+    ${sec("Exam",String(T.exam||"").trim()||abn||String(p.examNotes||"").trim()?exam:"")}
+    ${sec("Labs",(hasLabs(p,"today")?fish(p,"today",true):"")+txt(T.labs))}
+    ${sec("Cultures",txt(T.cultures))}
+    ${sec("Imaging",txt(T.imaging))}
+    ${sec("Pathology",txt(T.path))}
+    ${sec("Consults",txt(T.consults))}
+    ${sec("Assessment &amp; plan",probs)}
+    ${sec("To-do",todos?`<ul>${todos}</ul>`:"")}
+    <div class="pnav noprint">
+      <button class="btn" ${prev?`data-act="tab" data-id="${prev.id}"`:"disabled"}>← ${prev?esc(tabLabel(prev,i-1)):"—"}</button>
+      <button class="btn" data-act="present">✎ Edit</button>
+      <button class="btn" ${next?`data-act="tab" data-id="${next.id}"`:"disabled"}>${next?esc(tabLabel(next,i+1)):"—"} →</button>
+    </div></div>`;
+}
+
+/* ---------- all-patients list ---------- */
+function renderList(){
+  $("title").textContent="All patients";
+  if(!S.patients.length){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button></div>`;return}
+  let openTotal=0;
+  const cards=S.patients.map((p,i)=>{
+    const todos=(p.todos||[]).map((t,j)=>[t,j]).filter(([t])=>t.t.trim());
+    openTotal+=todos.filter(([t])=>!t.done).length;
+    const stale=p.onelinerOld||p.problems.some(pr=>pr.old&&Object.keys(pr.old).length);
+    const unv=((p.today||{}).verify||[]).filter(v=>v.t.trim()&&!v.done).length;
+    return `<div class="card"><button class="ch" data-act="open" data-id="${p.id}"><b>${p.room?"Rm "+esc(p.room):"—"}</b><span class="nm">${esc(p.name)||"New patient"}</span><span class="pct">${progress(p)}% ›</span></button>
+      ${p.oneliner.trim()?`<div class="ol ${p.onelinerOld?"oldtxt":""}">${esc(p.oneliner)}</div>`:""}
+      <div>${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
+      ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}</span></label>`).join("")}
+    </div>`;
+  }).join("");
+  $("main").innerHTML=`<p class="sumline">${S.patients.length} patient${S.patients.length>1?"s":""} · ${openTotal} open to-do${openTotal===1?"":"s"}</p>${cards}`;
+}
+
 function render(){
   const m0=$("main"),keepOpen=(P()&&m0.dataset.pid===cur)?[...m0.querySelectorAll("details")].map(d=>d.open):null;
   renderTabs();
   $("mLock").classList.toggle("hidden",!key);
   $("mPass").textContent=key?"Change / remove passcode":"Set passcode";
+  $("presBtn").classList.toggle("hidden",listOn||!P());
+  $("presBtn").textContent=mode==="present"?"✎ Edit":"▶ Present";
   $("storeNote").textContent=!canStore?"⚠️ This browser isn't allowing storage — data will be lost when you close the page.":key?"Saved on this device, encrypted with your passcode. Auto-locks after "+LOCK_MIN+" min away.":"Saved on this device without encryption. Set a passcode to encrypt it.";
+  if(listOn){$("main").dataset.pid="";renderList();return}
   const p=P();
+  if(p&&mode==="present"){$("main").dataset.pid="";$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");renderPresent(p);return}
   if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Data stays in this browser on this device.<br>The page is blocked from making any network requests.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   $("main").innerHTML=`
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}${tx("code","Code status")}</div>
     <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
+
+  <details open><summary>To-do <span class="cnt" id="cntTodo">${openTodos} open</span></summary><div class="body">
+    ${todos}<button class="add" data-act="addTodo">＋ To-do</button>
+    <p class="meta">Open to-dos carry over each day. Checked ones clear on New day.</p></div></details>
 
   <details><summary>Background</summary><div class="body"><div class="grid two">${BACKGROUND.map(([k,l])=>ta(k,l)).join("")}</div></div></details>
 
@@ -357,20 +519,21 @@ function render(){
     <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
     <label class="f"><span>Labs to verify before rounds</span></label>${verify}
     <button class="add" data-act="addVerify">＋ Lab to verify</button>
-    <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 8px">⇢ Move all of today's values to Prior</button>${valuesBlock("today")}</div></details>
+    <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 8px">⇢ Move all of today's values to Prior</button>${fish(p,"today",false)}${valuesBlock("today")}</div></details>
 
   <details><summary>Prior values <span class="cnt"></span></summary><div class="body">
     <div class="warnbar">⚠️ Trend / context only — DO NOT present as current</div>
-    ${valuesBlock("prior")}</div></details>
+    ${fish(p,"prior",false)}${valuesBlock("prior")}</div></details>
 
-  <details open><summary>Meds &amp; orders check <span class="cnt">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
+  <details open><summary>Meds &amp; orders check <span class="cnt" id="cntMeds">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
 
-  <details open><summary>Exam checklist — usual suspects <span class="cnt">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
+  <details open><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
+    <button class="btn" data-act="copyExam" style="width:100%;margin-bottom:8px">⟲ Copy yesterday's exam</button>
     <p class="legend">Tap to cycle: blank → ✓ checked/unremarkable → ! abnormal → blank</p>
     <div class="cols">${examList()}</div>
     <div style="margin-top:8px">${ta("examNotes","Exam notes / abnormal findings")}</div></div></details>
 
-  <details open><summary>A/P checklist <span class="cnt">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
+  <details open><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
 
   <details open><summary>Assessment &amp; plan</summary><div class="body">
     ${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
@@ -383,6 +546,8 @@ function render(){
   <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), grays out the A&amp;P for you to update, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
   $("main").dataset.pid=p.id;
   if(p.onelinerOld)$("main").querySelector('[data-k="oneliner"]').classList.add("old");
+  if(p.examOld)$("main").querySelector('[data-k="today.exam"]').classList.add("old");
+  if(p.examNotesOld)$("main").querySelector('[data-k="examNotes"]').classList.add("old");
   p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
   if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
   $("main").querySelectorAll("textarea").forEach(grow);
@@ -395,22 +560,41 @@ $("main").addEventListener("input",e=>{
   setPath(P(),k,t.type==="checkbox"?t.checked:t.value);markTs(k);
   if(t.tagName==="TEXTAREA")grow(t);
   if(t.classList.contains("old"))unGray(k,t);
+  if(t.dataset.lab){const a=t.dataset.lab,c=t.closest(".lc");c.classList.remove("lo","hi");const fl=flag(a,t.value);if(fl)c.classList.add(fl);
+    $("main").querySelectorAll(`[data-tr="${a}"]`).forEach(s=>s.innerHTML=trend(P(),a))}
+  if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
 });
 $("main").addEventListener("change",e=>{if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
 function updateCounts(){
-  const p=P();const c=[count(p.medsChk,MEDS.length),count(p.examChk,EXAM.length),count(p.apChk,AP.length)];
-  const sums=[...$("main").querySelectorAll("summary .cnt")].slice(1);sums.forEach((s,i)=>s.textContent=c[i]);renderTabs();
+  const p=P(),set=(id,v)=>{const e=$(id);if(e)e.textContent=v};
+  set("cntMeds",count(p.medsChk,MEDS.length));set("cntExam",count(p.examChk,EXAM.length));set("cntAP",count(p.apChk,AP.length));
+  set("cntTodo",(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length+" open");renderTabs();
 }
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,p=S&&cur?P():null,i=+b.dataset.i;
   const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
   switch(a){
-    case"tab":cur=b.dataset.id;render();scrollTo(0,0);break;
-    case"addPt":{const n=newPatient();S.patients.push(n);cur=n.id;render();scrollTo(0,0);save();setTimeout(()=>{const f=document.querySelector('[data-k="name"]');f&&f.focus()},50);break}
+    case"tab":cur=b.dataset.id;listOn=false;render();scrollTo(0,0);break;
+    case"open":cur=b.dataset.id;listOn=false;mode="edit";render();scrollTo(0,0);break;
+    case"list":listOn=true;render();scrollTo(0,0);break;
+    case"present":mode=mode==="present"?"edit":"present";render();scrollTo(0,0);break;
+    case"todoChk":{const pt=S.patients.find(x=>x.id===b.dataset.pid);if(!pt)break;const td=pt.todos[i];td.done=b.checked;markTs("todos",pt);pt.updated=Date.now();
+      b.closest(".chk").classList.toggle("done",b.checked);if(S.sync)S.sync.dirty=true;clearTimeout(saveT);saveT=setTimeout(saveNow,400);schedulePush();renderTabs();break}
+    case"addTodo":p.todos=p.todos||[];p.todos.push({t:"",done:false});markTs("todos");rerender();{const n=$("main").querySelectorAll('.todo input[type=text]');n.length&&n[n.length-1].focus({preventScroll:true})}break;
+    case"delTodo":p.todos.splice(i,1);markTs("todos");rerender();break;
+    case"copyExam":{
+      const src=String(p.prior.exam||"").trim(),srcN=String((p.priorExam||{}).notes||"").trim();
+      if(!src&&!srcN){toast("No exam from yesterday to copy.");break}
+      if((String(p.today.exam||"").trim()||String(p.examNotes||"").trim())&&!confirm("Replace today's exam text and notes with yesterday's?"))break;
+      p.today.exam=p.prior.exam||"";p.examNotes=(p.priorExam||{}).notes||"";
+      p.examOld=!!src;p.examNotesOld=!!srcN;p.examFrom=(p.prior.dates||{}).exam||(p.priorExam||{}).date||"";
+      ["today.exam","examNotes","examOld","examNotesOld","examFrom"].forEach(k=>markTs(k));
+      rerender();toast("Copied yesterday's exam — gray until you re-examine and edit it.");break}
+    case"addPt":{const n=newPatient();S.patients.push(n);cur=n.id;listOn=false;mode="edit";render();scrollTo(0,0);save();{const f=document.querySelector('[data-k="name"]');f&&f.focus({preventScroll:true})}break}
     case"delPt":if(confirm("Remove "+(p.name||"this patient")+" and all their notes?")){S.deleted=S.deleted||{};S.deleted[cur]=Date.now();S.patients=S.patients.filter(x=>x.id!==cur);cur=S.patients[0]?.id||null;render();save()}break;
     case"tri":{const s=((p.examChk[b.dataset.key]||0)+1)%3;p.examChk[b.dataset.key]=s;markTs("examChk."+b.dataset.key);b.dataset.s=s;b.querySelector(".dot").textContent=s===1?"✓":s===2?"!":"";updateCounts();save();break}
     case"addVerify":markTs("today.verify");p.today.verify.push({t:"",done:false});rerender();break;
@@ -444,6 +628,8 @@ function apBanner(p){
 function unGray(k,el){
   const p=P();el.classList.remove("old");
   if(k==="oneliner"){p.onelinerOld=false;markTs("onelinerOld")}
+  else if(k==="today.exam"){p.examOld=false;markTs("examOld")}
+  else if(k==="examNotes"){p.examNotesOld=false;markTs("examNotesOld")}
   else{const m=k.match(/^problems\.(\d+)\.(\w+)$/);if(m){const pr=p.problems[+m[1]];if(pr&&pr.old){delete pr.old[m[2]];markTs("problems")}}}
   const b=$("main").querySelector(".oldbar");if(b&&!$("main").querySelector(".old"))b.remove();
   const i=k.match(/^problems\.(\d+)\./);if(i&&!Object.keys(p.problems[+i[1]].old||{}).length){const kb=$("main").querySelector(`[data-act="apKeep"][data-i="${i[1]}"]`);if(kb)kb.remove()}
@@ -453,8 +639,11 @@ function rollover(p){
   if((p.oneliner||"").trim())p.onelinerOld=true;
   p.problems.forEach(pr=>{pr.old={};["p","a","pl"].forEach(fl=>{if((pr[fl]||"").trim())pr.old[fl]=1})});
   p.apFrom=p.today.date||today();
+  p.priorExam={notes:p.examNotes||"",date:p.today.date||today()};
+  p.todos=(p.todos||[]).filter(x=>x.t.trim()&&!x.done);
+  p.examOld=false;p.examNotesOld=false;
   const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
-  p.today=Object.assign({date:today(),verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
+  p.today=Object.assign({date:today(),lab:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
   p.medsChk={};p.examChk={};p.apChk={};p.examNotes="";p.updated=Date.now();p.epoch=Date.now();p.ts={};
 }
@@ -661,6 +850,7 @@ $("syncSheet").addEventListener("click",async e=>{
   }
 });
 
+if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}
 boot();
 </script>
 </body>

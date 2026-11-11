@@ -2,6 +2,14 @@
 
 A fillable morning-rounds sheet (built from Outline v3) that syncs between devices with end-to-end encryption.
 
+## Features
+- One tab per patient plus an **All** list (room, one-liner, code status, "A&P not updated", labs left to verify, every open to-do).
+- **Present** view: read-only, large text, in presenting order, with ←/→ between patients.
+- Lab boxes (BMP, CBC, Ca/Mg/Phos) with arrows vs the last value and high/low coloring.
+- To-dos that carry over each day until checked; checked ones clear on New day.
+- "Copy yesterday's exam" (grayed until edited), move today → Prior per field, A&P carried forward grayed.
+- Works offline: a service worker (`public/sw.js`) caches only the app shell, never patient data or `/api`.
+
 ## Privacy model
 - Notes live in each device's browser storage, encrypted with that device's passcode (AES-GCM, PBKDF2 key).
 - Sync: a random 120-bit pairing code is made on the first device and handed to others by QR code or typing.
