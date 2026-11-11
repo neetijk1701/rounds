@@ -6,6 +6,7 @@ A fillable morning-rounds sheet (built from Outline v3) that syncs between devic
 - One tab per patient plus an **All** list (room, one-liner, code status, "A&P not updated", labs left to verify, every open to-do).
 - **Present** view: read-only, large text, in presenting order, with ←/→ between patients.
 - Lab boxes (BMP, CBC, Ca/Mg/Phos) with arrows vs the last value and high/low coloring.
+- Fillable vitals (with O₂ device), I/O (net auto), Epic-style exam (WNL/Abnl per system + finding chips), cultures/imaging/consults lists that persist across days, code-status chips. Every section keeps a free-text notes box.
 - To-dos that carry over each day until checked; checked ones clear on New day.
 - "Copy yesterday's exam" (grayed until edited), move today → Prior per field, A&P carried forward grayed.
 - Works offline: a service worker (`public/sw.js`) caches only the app shell, never patient data or `/api`.

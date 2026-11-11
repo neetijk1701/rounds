@@ -48,7 +48,7 @@ label.f>span{display:block;font-size:12px;font-weight:600;color:var(--mute);marg
 input[type=text],input[type=date],input[type=password],input[type=number],textarea{width:100%;font:inherit;font-size:16px;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:8px;padding:7px 9px}
 textarea{resize:none;min-height:38px;overflow:hidden;display:block}
 input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;border-color:transparent}
-.f>span .mv{float:right;background:none;border:1px solid var(--line);color:var(--acc2);border-radius:6px;padding:0 7px;font-size:12px;font-weight:600;line-height:18px}
+.f>span .mv{float:right}
 .f>span .dt{font-style:normal;font-weight:500;color:var(--warn)}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:#1b2430;color:#fff;padding:10px 14px;border-radius:10px;z-index:30;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:92vw}
 #toast button{background:none;border:0;color:#9cc3ff;font-weight:700;margin-left:8px}
@@ -101,6 +101,51 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+.mv{background:none;border:1px solid var(--line);color:var(--acc2);border-radius:6px;padding:0 7px;font-size:12px;font-weight:600;line-height:18px;text-transform:none;letter-spacing:0}
+.subh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:16px 0 6px;padding-top:10px;border-top:1px dashed var(--line)}
+.subh>span{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 11px;font-size:14px}
+.chip.on{background:var(--acc2);border-color:var(--acc2);color:#fff;font-weight:600}
+.fb.vit{flex-wrap:wrap}
+.fb.vit .lc:not(:last-child){border-right:2px solid var(--line)}
+.lc.bp .bpi{display:flex;align-items:center;gap:2px}
+.lc.bp input{width:52px!important;text-align:center;padding:4px 2px;font-size:16px}
+.bpi input.hi{color:var(--bad);font-weight:700}.bpi input.lo{color:var(--acc2);font-weight:700}
+.fb.o2{flex-direction:column;align-items:flex-start;gap:6px;padding:8px}
+.fb.o2 .ln{font-size:11px;font-weight:700;color:var(--mute)}
+.o2f{max-width:200px}
+.fb.io{flex-wrap:wrap;gap:6px}
+.iog{display:flex;align-items:center;border-right:2px solid var(--line);padding-right:4px}
+.iog:last-child{border-right:0}
+.iog>.ln{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:800;color:var(--mute);padding:0 2px}
+.ionet{align-self:center;font-size:14px;padding:0 6px}
+.exbox{border:1px solid var(--line);border-radius:10px;padding:8px}
+.exbox.old{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(127,127,127,.07) 6px 12px)}
+.exbox.old .exr,.exbox.old .exn{color:var(--mute);font-style:italic}
+.exr{padding:7px 0;border-bottom:1px solid var(--line)}
+.exr:last-child{border-bottom:0}
+.exh{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.exh b{width:96px;font-size:14px}
+.seg{border:1px solid var(--line);background:var(--card);color:var(--mute);border-radius:7px;padding:3px 10px;font-size:13px;font-weight:600}
+.seg.on.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.seg.on.bad{background:var(--bad);border-color:var(--bad);color:#fff}
+.exn{font-size:13px;color:var(--mute)}
+.exr .chips{margin:6px 0 0 0}
+.exr .chip{font-size:13px;padding:3px 9px}
+.exr .chip.on{background:var(--bad);border-color:var(--bad)}
+.ext{margin-top:6px;font-size:15px!important;padding:5px 8px!important}
+.exl{font-size:14px;margin:2px 0}
+.rw{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
+.rw.pos{border-color:var(--bad);background:rgba(192,57,43,.05)}
+.rwh{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.rwh select,.rwh input[type=date]{font:inherit;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 6px}
+.rwh input.site{flex:1;min-width:120px;width:auto}
+.rwh .x{margin-left:auto}
+.rwh input[type=date]{width:auto}
+.dd{font-size:13px;font-weight:700;color:var(--mute)}
+.vv.hi{color:var(--bad);font-weight:700}.vv.lo{color:var(--acc2);font-weight:700}
+.pres .tr{font-size:12px;color:var(--mute)}
 /* lab boxes */
 .fishes{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0 10px}
 .fb{border:1px solid var(--line);border-radius:10px;padding:6px;display:flex;align-items:stretch}
@@ -2518,6 +2563,26 @@ const BMP=[["na","Na",135,145],["cl","Cl",98,107],["bun","BUN",7,20],["k","K",3.
 const CBC=[["wbc","WBC",4,11],["hgb","Hgb",12,17.5],["hct","Hct",36,50],["plt","Plt",150,400]];
 const XTRA=[["ca","Ca",8.5,10.5],["mg","Mg",1.7,2.4],["phos","Phos",2.5,4.5]];
 const ANALYTES=[...BMP,...CBC,...XTRA], AN=Object.fromEntries(ANALYTES.map(a=>[a[0],a]));
+const VIT=[["tmax","Tmax"],["hr","HR",60,100],["sbp","SBP",90,160],["dbp","DBP",50,100],["rr","RR",10,20],["spo2","SpO₂",92,100],["wt","Wt"]];
+const VITK=[...VIT.map(v=>v[0]),"o2dev","o2flow"];
+const O2DEV=["RA","NC","HFNC","NRB","BiPAP","Vent"];
+const IOK=[["po","PO"],["iv","IV"],["uop","Urine"],["drain","Drain/other"],["stool","Stool #"]];
+const EXSYS=[
+ ["gen","General","NAD, A&O×3",["ill-appearing","distressed","diaphoretic","lethargic","confused","cachectic"]],
+ ["heent","HEENT","NC/AT, MMM, anicteric",["dry MM","scleral icterus","pale conjunctiva","thrush"]],
+ ["neck","Neck","supple, no JVD",["JVD","LAD","stiff"]],
+ ["cv","CV","RRR, no m/r/g",["tachycardic","bradycardic","irregularly irregular","murmur","S3","S4","rub"]],
+ ["resp","Resp","CTAB, no increased WOB",["crackles","wheezes","rhonchi","diminished bases","increased WOB","accessory muscles","on O₂"]],
+ ["abd","Abd","soft, NT/ND, +BS",["tender","distended","guarding","rebound","hypoactive BS","HSM","ascites","ostomy"]],
+ ["ext","Ext","WWP, no edema",["edema 1+","edema 2+","edema 3+","pitting","calf tenderness","asymmetric","cool/mottled"]],
+ ["skin","Skin","no rashes or wounds",["jaundice","pallor","rash","pressure injury","wound","cellulitis","bruising"]],
+ ["neuro","Neuro","no focal deficits",["focal weakness","asterixis","dysarthria","tremor","sensory deficit","unsteady gait"]],
+ ["psych","Psych","appropriate mood/affect",["agitated","anxious","flat affect","delirious"]],
+ ["lines","Lines/drains","sites c/d/i",["PIV","PICC","CVC","Foley","NGT","drain","site erythema","site tender"]]];
+const CX_SRC=["Blood","Urine","Sputum","Wound","Stool","CSF","Fluid","Other"], CX_ST=["Pending","NGTD","Positive","Final — neg"];
+const IMG_MOD=["CXR","CT","US","MRI","Echo","EKG","XR","Other"], IMG_ST=["Ordered","Pending read","Prelim","Final"];
+const CON_ST=["Requested","Seen","Following","Signed off"];
+const CODES=["Full","DNR","DNR/DNI","Comfort"];
 const BACKGROUND=[["pmh","PMH"],["psh","PSH"],["allergies","Drug Allergies"],["meds","Meds"],["social","Social Hx"],["family","Family Hx"]];
 const VALUES=[["vitals","Vital signs"],["exam","Exam"],["io","I/O"],["labs","Labs"],["cultures","Cultures"],["path","Pathology"],["imaging","Imaging"],["consults","Consults"]];
 const MEDS=[["diet","Diet / NPO status: confirmed?"],["dvt","DVT prophylaxis: on it?"],["bowel","Bowel regimen if on opioids?"],["newmeds","New meds: indication clear?"],["abx","ABX"],["renal","Renal/hepatic dose adjustment?"],["home","Home meds: still holding?"],["prn","PRN usage overnight?"],["gi","GI prophylaxis if indicated?"]];
@@ -2534,7 +2599,7 @@ const uid=()=>Math.random().toString(36).slice(2,10);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const blankVals=()=>Object.fromEntries(VALUES.map(([k])=>[k,""]));
 function newPatient(){
-  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,todos:[],examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
+  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,todos:[],cx:[],img:[],cons:[],examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
     today:Object.assign({date:today(),verify:[{t:"",done:false}]},blankVals()),
     prior:Object.assign({date:""},blankVals()),
     problems:[{p:"",a:"",pl:""},{p:"",a:"",pl:""},{p:"",a:"",pl:""}]};
@@ -2545,7 +2610,8 @@ function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
 function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>(a[k]==null&&(a[k]={}),a[k]),o);t[last]=v}
 const P=()=>S.patients.find(p=>p.id===cur);
 /* per-field edit times, so two devices editing the same patient merge cleanly */
-const unitOf=k=>k.startsWith("problems.")?"problems":k.startsWith("today.verify.")?"today.verify":k.startsWith("todos.")?"todos":k;
+const unitOf=k=>{const m=k.match(/^(problems|todos|cx|img|cons)\./);if(m)return m[1];if(k.startsWith("today.verify."))return "today.verify";
+  const e=k.match(/^((?:today|prior)\.ex\.\w+)\./);return e?e[1]:k};
 function markTs(k,p=P()){if(!p)return;p.ts=p.ts||{};p.ts[unitOf(k)]=Date.now()}
 
 /* ---------- crypto + storage (local only) ---------- */
@@ -2658,43 +2724,50 @@ function examList(){
 }
 function count(obj,n){return `${Object.values(obj).filter(Boolean).length}/${n}`}
 const mmdd=d=>{const m=String(d||"").match(/^\d{4}-(\d\d)-(\d\d)$/);return m?(+m[1])+"/"+(+m[2]):""};
-function valuesBlock(which){
+function fieldTA(which,k,label){
   const p=P(),dates=(p.prior&&p.prior.dates)||{};
-  return `<div class="grid two">${VALUES.map(([k,l])=>{
-    const lab=which==="today"?`${l}<button class="mv" data-act="mv" data-f="${k}" title="Move to Prior">→ Prior</button>`
-      :`${l}${dates[k]?` <em class="dt">from ${esc(mmdd(dates[k]))}</em>`:""}`;
-    return ta(which+"."+k,lab);
-  }).join("")}</div>`;
+  const lab=which==="today"?`${label}<button class="mv" data-act="mv" data-f="${k}" title="Move to Prior">→ Prior</button>`
+    :`${label}${dates[k]?` <em class="dt">from ${esc(mmdd(dates[k]))}</em>`:""}`;
+  return ta(which+"."+k,lab);
+}
+function subh(which,k,title,extra=""){
+  const p=P(),dates=(p.prior&&p.prior.dates)||{};
+  return `<div class="subh"><span>${title}${which==="prior"&&dates[k]?` <em class="dt">from ${esc(mmdd(dates[k]))}</em>`:""}</span>${extra}${which==="today"?`<button class="mv" data-act="mv" data-f="${k}">→ Prior</button>`:""}</div>`;
+}
+/* structured groups that move to Prior per field: field key -> [object name, keys] */
+const STRUCT={labs:["lab",null],vitals:["vit",VITK],io:["ios",IOK.map(x=>x[0])]};
+STRUCT.labs[1]=ANALYTES.map(a=>a[0]);
+const filled=v=>String(v??"").trim()!=="";
+const anyIn=(o,ks)=>!!o&&ks.some(a=>filled(o[a]));
+const exHas=ex=>!!ex&&Object.values(ex).some(e=>e&&(e.s||filled(e.t)));
+function markAll(p,path,o){
+  if(o&&typeof o==="object"&&!Array.isArray(o)){for(const k of Object.keys(o))markAll(p,path+"."+k,o[k])}
+  else markTs(path,p);
 }
 /* Move today's values into Prior (per field). Blank fields are skipped so older Prior values aren't wiped. */
 let undoSnap=null,toastT=null;
 function moveValues(p,keys,track=true){
-  const labsBoxes=keys.includes("labs")&&hasLabs(p,"today");
-  const moved=keys.filter(k=>(p.today[k]||"").trim()||(k==="labs"&&labsBoxes));
+  const T=p.today,Pr=p.prior,d=T.date||today();
+  const has=k=>filled(T[k])||(STRUCT[k]&&anyIn(T[STRUCT[k][0]],STRUCT[k][1]))||(k==="exam"&&exHas(T.ex));
+  const moved=keys.filter(has);
   if(!moved.length)return [];
-  if(track)undoSnap={pid:p.id,keys:moved,today:moved.map(k=>p.today[k]),prior:moved.map(k=>p.prior[k]),dates:moved.map(k=>(p.prior.dates||{})[k]),
-    lab:clone({t:p.today.lab||{},p:p.prior.lab||{},d:p.prior.labDates||{}}),examOld:p.examOld};
-  p.prior.dates=p.prior.dates||{};
-  const d=p.today.date||today();
+  if(track)undoSnap={pid:p.id,keys:moved,today:clone(T),prior:clone(Pr),examOld:p.examOld};
+  Pr.dates=Pr.dates||{};
   for(const k of moved){
-    if((p.today[k]||"").trim()){p.prior[k]=p.today[k];p.prior.dates[k]=d;p.today[k]="";
-      if(track){markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)}}
-    if(k==="exam"&&p.examOld){p.examOld=false;if(track)markTs("examOld",p)}
+    if(filled(T[k])){Pr[k]=T[k];Pr.dates[k]=d;T[k]=""}
+    if(STRUCT[k]){const [o,ks]=STRUCT[k];T[o]=T[o]||{};Pr[o]=Pr[o]||{};Pr[o+"Dates"]=Pr[o+"Dates"]||{};
+      for(const a of ks){if(!filled(T[o][a]))continue;Pr[o][a]=T[o][a];Pr[o+"Dates"][a]=d;T[o][a]=""}}
+    if(k==="exam"){if(exHas(T.ex)){Pr.ex=T.ex;Pr.exDate=d;T.ex={}}if(p.examOld){p.examOld=false;if(track)markTs("examOld",p)}}
+    if(!Pr.dates[k]&&STRUCT[k])Pr.dates[k]=d;
   }
-  if(labsBoxes){p.today.lab=p.today.lab||{};p.prior.lab=p.prior.lab||{};p.prior.labDates=p.prior.labDates||{};
-    for(const [a] of ANALYTES){const v=String(p.today.lab[a]??"").trim();if(!v)continue;
-      p.prior.lab[a]=p.today.lab[a];p.prior.labDates[a]=d;p.today.lab[a]="";
-      if(track){markTs("today.lab."+a,p);markTs("prior.lab."+a,p);markTs("prior.labDates."+a,p)}}}
+  if(track){markAll(p,"today",T);markAll(p,"prior",Pr)}
   return moved;
 }
 function undoMove(){
   const u=undoSnap;undoSnap=null;hideToast();if(!u)return;
   const p=S.patients.find(x=>x.id===u.pid);if(!p)return;
-  p.prior.dates=p.prior.dates||{};
-  if(u.lab){p.today.lab=u.lab.t;p.prior.lab=u.lab.p;p.prior.labDates=u.lab.d;
-    for(const [a] of ANALYTES){markTs("today.lab."+a,p);markTs("prior.lab."+a,p);markTs("prior.labDates."+a,p)}}
-  if(u.examOld!==undefined){p.examOld=u.examOld;markTs("examOld",p)}
-  u.keys.forEach((k,i)=>{p.today[k]=u.today[i];p.prior[k]=u.prior[i];if(u.dates[i]===undefined)delete p.prior.dates[k];else p.prior.dates[k]=u.dates[i];markTs("today."+k,p);markTs("prior."+k,p);markTs("prior.dates."+k,p)});
+  p.today=u.today;p.prior=u.prior;p.examOld=u.examOld;
+  markAll(p,"today",p.today);markAll(p,"prior",p.prior);markTs("examOld",p);
   if(p.id===cur){const y=scrollY;render();scrollTo(0,y)}save();
 }
 function toast(msg,undo){
@@ -2702,31 +2775,97 @@ function toast(msg,undo){
   clearTimeout(toastT);toastT=setTimeout(hideToast,undo?8000:2500);
 }
 function hideToast(){$("toast").classList.add("hidden")}
-/* ---------- lab boxes ---------- */
+
+/* ---------- number boxes (labs, vitals, I/O) ---------- */
 const num=v=>{const m=String(v??"").match(/-?\d+(\.\d+)?/);return m?parseFloat(m[0]):NaN};
-function flag(a,v){const n=num(v),x=AN[a];if(isNaN(n))return"";return n<x[2]?"lo":n>x[3]?"hi":""}
-function trend(p,a){
-  const t=getPath(p,"today.lab."+a),pv=getPath(p,"prior.lab."+a),nt=num(t),np=num(pv);
-  if(isNaN(np))return"";
-  if(isNaN(nt))return "prev "+esc(pv);
+const VITR=Object.fromEntries(VIT.map(v=>[v[0],v]));
+function flagOf(o,a,v){
+  const n=num(v);if(isNaN(n))return"";
+  if(o==="lab"){const x=AN[a];return n<x[2]?"lo":n>x[3]?"hi":""}
+  if(o==="vit"){if(a==="tmax")return (n<50?n>=38:n>=100.4)?"hi":"";const x=VITR[a];if(!x||x[2]==null)return"";return n<x[2]?"lo":n>x[3]?"hi":""}
+  return"";
+}
+function trendOf(p,o,a){
+  const pv=getPath(p,`prior.${o}.${a}`),np=num(pv);if(isNaN(np))return"";
+  const nt=num(getPath(p,`today.${o}.${a}`));if(isNaN(nt))return "prev "+esc(pv);
   const d=nt-np;return (Math.abs(d)<1e-9?"→ ":d>0?"↑ ":"↓ ")+esc(pv);
 }
-const hasLabs=(p,which)=>ANALYTES.some(([a])=>String(getPath(p,which+".lab."+a)??"").trim());
-function priorLabDate(p){const d=Object.values((p.prior&&p.prior.labDates)||{}).filter(Boolean).sort();return d.length?d[d.length-1]:""}
-function lcell(p,which,a,ro){
-  const v=getPath(p,which+".lab."+a)??"",fl=flag(a,v),lab=esc(AN[a][1]);
-  if(ro)return `<div class="lc ${fl}"><span class="ln">${lab}</span><b>${esc(v)||"—"}</b><span class="tr">${trend(p,a)}</span></div>`;
-  return `<div class="lc ${fl}"><span class="ln">${lab}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${which}.lab.${a}" data-lab="${a}" value="${esc(v)}">${which==="today"?`<span class="trw" data-tr="${a}">${trend(p,a)}</span>`:""}</div>`;
+const hasLabs=(p,which)=>anyIn(getPath(p,which+".lab"),STRUCT.labs[1]);
+function priorDate(p,o){const d=Object.values((p.prior&&p.prior[o+"Dates"])||{}).filter(Boolean).sort();return d.length?d[d.length-1]:""}
+function ncell(p,which,o,a,label,ro,cls=""){
+  const v=getPath(p,`${which}.${o}.${a}`)??"",fl=flagOf(o,a,v);
+  if(ro)return `<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><b>${esc(v)||"—"}</b><span class="tr">${trendOf(p,o,a)}</span></div>`;
+  return `<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${which}.${o}.${a}" data-num="${o}.${a}" value="${esc(v)}">${which==="today"?`<span class="trw" data-tr="${o}.${a}">${trendOf(p,o,a)}</span>`:""}</div>`;
 }
 function fish(p,which,ro){
-  const c=a=>lcell(p,which,a,ro);
-  const any=keys=>!ro||keys.some(a=>String(getPath(p,which+".lab."+a)??"").trim());
-  const pd=priorLabDate(p),hint=which==="today"&&pd&&!ro?` · arrows vs ${esc(mmdd(pd))}`:"";
-  return `<div class="fbh">BMP · CBC · Ca/Mg/Phos${hint}</div><div class="fishes">
+  const c=a=>ncell(p,which,"lab",a,AN[a][1],ro);
+  const any=keys=>!ro||keys.some(a=>filled(getPath(p,which+".lab."+a)));
+  const pd=priorDate(p,"lab"),hint=which==="today"&&pd&&!ro?` · arrows vs ${esc(mmdd(pd))}`:"";
+  return `${ro?"":`<div class="fbh">BMP · CBC · Ca/Mg/Phos${hint}</div>`}<div class="fishes">
     ${any(BMP.map(x=>x[0]))?`<div class="fb bmp"><div class="g">${c("na")}${c("cl")}${c("bun")}${c("k")}${c("co2")}${c("cr")}</div><div class="glu">${c("glu")}</div></div>`:""}
     ${any(CBC.map(x=>x[0]))?`<div class="fb cbc">${c("wbc")}<div class="mid">${c("hgb")}${c("hct")}</div>${c("plt")}</div>`:""}
     ${any(XTRA.map(x=>x[0]))?`<div class="fb xtra">${c("ca")}${c("mg")}${c("phos")}</div>`:""}</div>`;
 }
+function vitBox(p,which){
+  const v=getPath(p,which+".vit")||{},c=(a,l)=>ncell(p,which,"vit",a,l,false);
+  const dev=v.o2dev||"";
+  return `<div class="fishes"><div class="fb vit">${c("tmax","Tmax")}${c("hr","HR")}
+    <div class="lc bp"><span class="ln">BP</span><span class="bpi"><input type="text" inputmode="decimal" data-k="${which}.vit.sbp" data-num="vit.sbp" value="${esc(v.sbp||"")}" class="${flagOf("vit","sbp",v.sbp)}">/<input type="text" inputmode="decimal" data-k="${which}.vit.dbp" data-num="vit.dbp" value="${esc(v.dbp||"")}"></span>${which==="today"?`<span class="trw" data-tr="vit.sbp">${trendOf(p,"vit","sbp")}</span>`:""}</div>
+    ${c("rr","RR")}${c("spo2","SpO₂ %")}${c("wt","Wt kg")}</div>
+    <div class="fb o2"><span class="ln">O₂</span><div class="chips">${O2DEV.map(d=>`<button class="chip ${dev===d?"on":""}" data-act="pick" data-k="${which}.vit.o2dev" data-v="${d}">${d}</button>`).join("")}</div>
+    ${dev&&dev!=="RA"?`<input type="text" class="o2f" data-k="${which}.vit.o2flow" value="${esc(v.o2flow||"")}" placeholder="${dev==="NC"?"L/min":"settings / FiO₂"}">`:""}</div></div>`;
+}
+function ioNet(io){
+  if(!io||!anyIn(io,["po","iv","uop","drain"]))return null;
+  const n=k=>num(io[k])||0, i=n("po")+n("iv"), o=n("uop")+n("drain");
+  return {i,o,net:i-o};
+}
+const fmtNet=r=>r?`In ${r.i} · Out ${r.o} · <b>Net ${r.net>0?"+":""}${r.net} mL</b>`:"";
+function ioBox(p,which){
+  const io=getPath(p,which+".ios")||{},c=(a,l)=>ncell(p,which,"ios",a,l,false);
+  return `<div class="fishes"><div class="fb io"><div class="iog"><span class="ln">IN</span>${c("po","PO mL")}${c("iv","IV mL")}</div>
+    <div class="iog"><span class="ln">OUT</span>${c("uop","Urine mL")}${c("drain","Drain/other")}${c("stool","Stool #")}</div></div>
+    <div class="ionet" data-ionet="${which}">${fmtNet(ioNet(io))}</div></div>`;
+}
+function exLines(ex){
+  return EXSYS.map(([k,l,norm])=>{const e=(ex||{})[k];if(!e)return null;
+    if(e.s===1)return {l,t:filled(e.t)?norm+"; "+e.t:norm,ab:false};
+    if(e.s===2)return {l,t:[...(e.f||[]),e.t].filter(filled).join(", ")||"abnormal",ab:true};
+    if(filled(e.t))return {l,t:e.t,ab:false};return null}).filter(Boolean);
+}
+function exBox(p){
+  const ex=p.today.ex||{};
+  const rows=EXSYS.map(([k,l,norm,chips])=>{const e=ex[k]||{},s=e.s||0,f=e.f||[];
+    return `<div class="exr ${s===2?"ab":""}"><div class="exh"><b>${l}</b>
+      <button class="seg ${s===1?"on ok":""}" data-act="exS" data-sys="${k}" data-v="1">WNL</button><button class="seg ${s===2?"on bad":""}" data-act="exS" data-sys="${k}" data-v="2">Abnl</button>
+      ${s===1?`<span class="exn">${esc(norm)}</span>`:""}</div>
+      ${s===2?`<div class="chips">${chips.map(c=>`<button class="chip ${f.includes(c)?"on":""}" data-act="exF" data-sys="${k}" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>`:""}
+      ${s===2||(s&&filled(e.t))?`<input type="text" class="ext" data-k="today.ex.${k}.t" value="${esc(e.t||"")}" placeholder="${s===2?"details (location, grade…)":"add detail (optional)"}">`:""}</div>`}).join("");
+  return `<div id="exBox" class="exbox ${p.examOld?"old":""}">
+    ${p.examOld?`<div class="oldbar">Copied from ${esc(mmdd(p.examFrom)||"yesterday")} — gray until you re-examine. Tap anything to make it current.</div>`:""}
+    <div class="toolbar" style="margin:0 0 6px"><button class="btn" data-act="exAll">All WNL</button><button class="btn" data-act="exClear">Clear</button><button class="btn" data-act="copyExam">⟲ Copy yesterday's</button></div>${rows}</div>`;
+}
+function rowsBlock(p,kind){
+  const rows=p[kind]||[],dsel=(path,opts,v,ph)=>`<select data-k="${path}"><option value="">${ph}</option>${opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  const html=rows.map((r,i)=>{const pre=`${kind}.${i}.`;
+    if(kind==="cx")return `<div class="rw ${r.st==="Positive"?"pos":""}"><div class="rwh">${dsel(pre+"src",CX_SRC,r.src,"Source")}<input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",CX_ST,r.st,"Status")}<span class="dd">${cxDay(r)}</span><button class="x" data-act="delRow" data-kind="cx" data-i="${i}">×</button></div>
+      <input type="text" data-k="${pre}org" value="${esc(r.org||"")}" placeholder="Organism / sensitivities"></div>`;
+    if(kind==="img")return `<div class="rw"><div class="rwh">${dsel(pre+"mod",IMG_MOD,r.mod,"Study")}<input type="text" class="site" data-k="${pre}site" value="${esc(r.site||"")}" placeholder="Site (chest, A/P…)"><input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",IMG_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="img" data-i="${i}">×</button></div>
+      <textarea rows="1" data-k="${pre}imp" placeholder="Impression">${esc(r.imp||"")}</textarea></div>`;
+    return `<div class="rw"><div class="rwh"><input type="text" class="site" data-k="${pre}svc" value="${esc(r.svc||"")}" placeholder="Service (ID, GI…)">${dsel(pre+"st",CON_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="cons" data-i="${i}">×</button></div>
+      <textarea rows="1" data-k="${pre}recs" placeholder="Recs">${esc(r.recs||"")}</textarea></div>`;
+  }).join("");
+  const lbl={cx:"＋ Culture",img:"＋ Study",cons:"＋ Consult"}[kind];
+  return html+`<button class="add" data-act="addRow" data-kind="${kind}">${lbl}</button>`;
+}
+function cxDay(r){
+  if(!r.date||!/^\d{4}-\d\d-\d\d$/.test(r.date))return"";
+  const d=Math.floor((new Date(today()+"T00:00")-new Date(r.date+"T00:00"))/864e5);
+  return d>=0?`d${d}`:"";
+}
+const cxText=r=>[r.src||"Culture",r.date?`(${mmdd(r.date)})`:"",r.st?"— "+r.st+(r.st==="NGTD"||r.st==="Pending"?` ${cxDay(r)}`:""):""].filter(Boolean).join(" ")+(filled(r.org)?": "+r.org:"");
+const imgText=r=>[r.mod||"Study",r.site,r.date?`(${mmdd(r.date)})`:"",r.st?"— "+r.st:""].filter(Boolean).join(" ")+(filled(r.imp)?": "+r.imp:"");
+const consText=r=>[r.svc||"Consult",r.st?"— "+r.st:""].filter(Boolean).join(" ")+(filled(r.recs)?": "+r.recs:"");
 
 /* ---------- presenting view ---------- */
 function renderPresent(p){
@@ -2739,8 +2878,9 @@ function renderPresent(p){
   const probs=p.problems.filter(pr=>(pr.p+pr.a+pr.pl).trim()).map((pr,i)=>{const old=pr.old&&Object.keys(pr.old).length;
     return `<div class="pp ${old?"oldtxt":""}"><b>${i+1}. ${esc(pr.p)||"(untitled)"}</b>${old?stale(p.apFrom):""}${pr.a.trim()?`<div>${esc(pr.a).replace(/\n/g,"<br>")}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("");
   const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}</li>`).join("");
-  const exam=(p.examOld&&String(T.exam||"").trim()?`<span class="stale">copied from ${esc(mmdd(p.examFrom)||"yesterday")} — re-examine</span>`:"")+
-    `<div class="${p.examOld?"oldtxt":""}">${txt(T.exam)}</div>`+(abn?`<p class="abn">${abn}</p>`:"")+`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`;
+  const exL=exLines(T.ex).map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("");
+  const exam=(p.examOld&&(String(T.exam||"").trim()||exL)?`<span class="stale">copied from ${esc(mmdd(p.examFrom)||"yesterday")} — re-examine</span>`:"")+
+    `<div class="${p.examOld?"oldtxt":""}">${exL}${txt(T.exam)}</div>`+(abn?`<p class="abn">${abn}</p>`:"")+`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`;
   const i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1];
   $("main").innerHTML=`<div class="pres">
     <div class="ph1">${esc(p.name)||"Patient"}</div>
@@ -2748,14 +2888,14 @@ function renderPresent(p){
     ${unv.length?`<div class="warnbar">Not verified yet: ${unv.join(", ")}</div>`:""}
     ${sec("One-liner",p.oneliner.trim()?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")}
     ${sec("Overnight",txt(p.on))}
-    ${sec("Vitals",txt(T.vitals))}
-    ${sec("I/O",txt(T.io))}
-    ${sec("Exam",String(T.exam||"").trim()||abn||String(p.examNotes||"").trim()?exam:"")}
+    ${sec("Vitals",vitLine(p)+txt(T.vitals))}
+    ${sec("I/O",ioLine(p)+txt(T.io))}
+    ${sec("Exam",String(T.exam||"").trim()||exL||abn||String(p.examNotes||"").trim()?exam:"")}
     ${sec("Labs",(hasLabs(p,"today")?fish(p,"today",true):"")+txt(T.labs))}
-    ${sec("Cultures",txt(T.cultures))}
-    ${sec("Imaging",txt(T.imaging))}
+    ${sec("Cultures",(p.cx||[]).map(r=>`<div class="${r.st==="Positive"?"abn":""}">${esc(cxText(r))}</div>`).join("")+txt(T.cultures))}
+    ${sec("Imaging",(p.img||[]).map(r=>`<div>${esc(imgText(r))}</div>`).join("")+txt(T.imaging))}
     ${sec("Pathology",txt(T.path))}
-    ${sec("Consults",txt(T.consults))}
+    ${sec("Consults",(p.cons||[]).map(r=>`<div>${esc(consText(r))}</div>`).join("")+txt(T.consults))}
     ${sec("Assessment &amp; plan",probs)}
     ${sec("To-do",todos?`<ul>${todos}</ul>`:"")}
     <div class="pnav noprint">
@@ -2763,6 +2903,23 @@ function renderPresent(p){
       <button class="btn" data-act="present">✎ Edit</button>
       <button class="btn" ${next?`data-act="tab" data-id="${next.id}"`:"disabled"}>${next?esc(tabLabel(next,i+1)):"—"} →</button>
     </div></div>`;
+}
+
+function vitLine(p){
+  const v=(p.today||{}).vit||{},bits=[];
+  const s=(a,label,suf="")=>{if(!filled(v[a]))return;const fl=flagOf("vit",a,v[a]),tr=trendOf(p,"vit",a);bits.push(`${label} <span class="vv ${fl}">${esc(v[a])}${suf}</span>${tr?` <span class="tr">${tr}</span>`:""}`)};
+  s("tmax","Tmax");s("hr","HR");
+  if(filled(v.sbp)||filled(v.dbp)){const fl=flagOf("vit","sbp",v.sbp)||flagOf("vit","dbp",v.dbp),tr=trendOf(p,"vit","sbp");bits.push(`BP <span class="vv ${fl}">${esc(v.sbp||"?")}/${esc(v.dbp||"?")}</span>${tr?` <span class="tr">${tr}</span>`:""}`)}
+  s("rr","RR");
+  if(filled(v.spo2)||filled(v.o2dev)){const fl=flagOf("vit","spo2",v.spo2);bits.push(`SpO₂ <span class="vv ${fl}">${esc(v.spo2||"?")}%</span>${v.o2dev?" on "+esc([v.o2dev==="RA"?"":v.o2flow,v.o2dev].filter(filled).join(" ")):""}`)}
+  s("wt","Wt"," kg");
+  return bits.length?`<p>${bits.join(" · ")}</p>`:"";
+}
+function ioLine(p){
+  const io=(p.today||{}).ios||{},r=ioNet(io),bits=[];
+  if(r){bits.push(`In ${r.i}${filled(io.po)||filled(io.iv)?` (PO ${esc(io.po||0)}, IV ${esc(io.iv||0)})`:""}`);bits.push(`Out ${r.o}${filled(io.uop)?` (UOP ${esc(io.uop)}${filled(io.drain)?", drain "+esc(io.drain):""})`:""}`);bits.push(`<b>Net ${r.net>0?"+":""}${r.net} mL</b>`)}
+  if(filled(io.stool))bits.push(`Stool ×${esc(io.stool)}`);
+  return bits.length?`<p>${bits.join(" · ")}</p>`:"";
 }
 
 /* ---------- all-patients list ---------- */
@@ -2803,7 +2960,7 @@ function render(){
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   $("main").innerHTML=`
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
-    ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}${tx("code","Code status")}</div>
+    ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}<div>${tx("code","Code status")}<div class="chips" style="margin-top:4px">${CODES.map(c=>`<button class="chip ${p.code===c?"on":""}" data-act="pick" data-k="code" data-v="${c}">${c}</button>`).join("")}</div></div></div>
     <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
 
   <details open><summary>To-do <span class="cnt" id="cntTodo">${openTodos} open</span></summary><div class="body">
@@ -2816,16 +2973,28 @@ function render(){
     <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
     <label class="f"><span>Labs to verify before rounds</span></label>${verify}
     <button class="add" data-act="addVerify">＋ Lab to verify</button>
-    <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 8px">⇢ Move all of today's values to Prior</button>${fish(p,"today",false)}${valuesBlock("today")}</div></details>
+    <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 4px">⇢ Move all of today's values to Prior</button>
+    ${subh("today","vitals","Vitals")}${vitBox(p,"today")}${ta("today.vitals","Vitals notes (ranges, events)")}
+    ${subh("today","io","I/O")}${ioBox(p,"today")}${ta("today.io","I/O notes")}
+    ${subh("today","exam","Exam")}${exBox(p)}<div style="margin-top:6px">${ta("today.exam","Exam — other findings")}</div>
+    ${subh("today","labs","Labs")}${fish(p,"today",false)}${ta("today.labs","Other labs")}
+    ${subh("today","path","Pathology")}${ta("today.path","Pathology")}</div></details>
+
+  <details open><summary>Cultures <span class="cnt">${(p.cx||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cx")}<div style="margin-top:6px">${fieldTA("today","cultures","Culture notes")}</div></div></details>
+  <details open><summary>Imaging &amp; studies <span class="cnt">${(p.img||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"img")}<div style="margin-top:6px">${fieldTA("today","imaging","Imaging notes")}</div></div></details>
+  <details open><summary>Consults <span class="cnt">${(p.cons||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cons")}<div style="margin-top:6px">${fieldTA("today","consults","Consult notes")}</div></div></details>
 
   <details><summary>Prior values <span class="cnt"></span></summary><div class="body">
     <div class="warnbar">⚠️ Trend / context only — DO NOT present as current</div>
-    ${fish(p,"prior",false)}${valuesBlock("prior")}</div></details>
+    ${subh("prior","vitals","Vitals")}${vitBox(p,"prior")}${ta("prior.vitals","Vitals notes")}
+    ${subh("prior","io","I/O")}${ioBox(p,"prior")}${ta("prior.io","I/O notes")}
+    ${subh("prior","exam","Exam")}${exLines(p.prior.ex).map(x=>`<div class="exl ${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")}${ta("prior.exam","Exam — other findings")}
+    ${subh("prior","labs","Labs")}${fish(p,"prior",false)}${ta("prior.labs","Other labs")}
+    <div class="grid two" style="margin-top:8px">${["path","cultures","imaging","consults"].map(k=>fieldTA("prior",k,VALUES.find(v=>v[0]===k)[1])).join("")}</div></div></details>
 
   <details open><summary>Meds &amp; orders check <span class="cnt" id="cntMeds">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
 
   <details open><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
-    <button class="btn" data-act="copyExam" style="width:100%;margin-bottom:8px">⟲ Copy yesterday's exam</button>
     <p class="legend">Tap to cycle: blank → ✓ checked/unremarkable → ! abnormal → blank</p>
     <div class="cols">${examList()}</div>
     <div style="margin-top:8px">${ta("examNotes","Exam notes / abnormal findings")}</div></div></details>
@@ -2843,7 +3012,7 @@ function render(){
   <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), grays out the A&amp;P for you to update, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
   $("main").dataset.pid=p.id;
   if(p.onelinerOld)$("main").querySelector('[data-k="oneliner"]').classList.add("old");
-  if(p.examOld)$("main").querySelector('[data-k="today.exam"]').classList.add("old");
+  if(p.examOld){const n=$("main").querySelector('[data-k="today.exam"]');if(n)n.classList.add("old")}
   if(p.examNotesOld)$("main").querySelector('[data-k="examNotes"]').classList.add("old");
   p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
   if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
@@ -2857,14 +3026,19 @@ $("main").addEventListener("input",e=>{
   setPath(P(),k,t.type==="checkbox"?t.checked:t.value);markTs(k);
   if(t.tagName==="TEXTAREA")grow(t);
   if(t.classList.contains("old"))unGray(k,t);
-  if(t.dataset.lab){const a=t.dataset.lab,c=t.closest(".lc");c.classList.remove("lo","hi");const fl=flag(a,t.value);if(fl)c.classList.add(fl);
-    $("main").querySelectorAll(`[data-tr="${a}"]`).forEach(s=>s.innerHTML=trend(P(),a))}
+  if(t.dataset.num){const [o,a]=t.dataset.num.split("."),fl=flagOf(o,a,t.value),c=t.closest(".lc");
+    if(c&&!c.classList.contains("bp")){c.classList.remove("lo","hi");if(fl)c.classList.add(fl)}else{t.classList.remove("lo","hi");if(fl)t.classList.add(fl)}
+    $("main").querySelectorAll(`[data-tr="${o}.${a}"]`).forEach(s=>s.innerHTML=trendOf(P(),o,a));
+    if(o==="ios"){const w=k.split(".")[0],n=$("main").querySelector(`[data-ionet="${w}"]`);if(n)n.innerHTML=fmtNet(ioNet(P()[w].ios))}}
+  if(/^today\.ex\./.test(k))exFresh();
   if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
 });
-$("main").addEventListener("change",e=>{if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
+$("main").addEventListener("change",e=>{if(e.target.tagName==="SELECT"&&e.target.dataset.k){const t=e.target;setPath(P(),t.dataset.k,t.value);markTs(t.dataset.k);
+    const rw=t.closest(".rw");if(rw&&/^cx\.\d+\.st$/.test(t.dataset.k))rw.classList.toggle("pos",t.value==="Positive");save();return}
+  if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
 function updateCounts(){
   const p=P(),set=(id,v)=>{const e=$(id);if(e)e.textContent=v};
   set("cntMeds",count(p.medsChk,MEDS.length));set("cntExam",count(p.examChk,EXAM.length));set("cntAP",count(p.apChk,AP.length));
@@ -2884,12 +3058,12 @@ document.addEventListener("click",e=>{
     case"addTodo":p.todos=p.todos||[];p.todos.push({t:"",done:false});markTs("todos");rerender();{const n=$("main").querySelectorAll('.todo input[type=text]');n.length&&n[n.length-1].focus({preventScroll:true})}break;
     case"delTodo":p.todos.splice(i,1);markTs("todos");rerender();break;
     case"copyExam":{
-      const src=String(p.prior.exam||"").trim(),srcN=String((p.priorExam||{}).notes||"").trim();
-      if(!src&&!srcN){toast("No exam from yesterday to copy.");break}
-      if((String(p.today.exam||"").trim()||String(p.examNotes||"").trim())&&!confirm("Replace today's exam text and notes with yesterday's?"))break;
-      p.today.exam=p.prior.exam||"";p.examNotes=(p.priorExam||{}).notes||"";
-      p.examOld=!!src;p.examNotesOld=!!srcN;p.examFrom=(p.prior.dates||{}).exam||(p.priorExam||{}).date||"";
-      ["today.exam","examNotes","examOld","examNotesOld","examFrom"].forEach(k=>markTs(k));
+      const src=String(p.prior.exam||"").trim(),srcN=String((p.priorExam||{}).notes||"").trim(),srcX=exHas(p.prior.ex);
+      if(!src&&!srcN&&!srcX){toast("No exam from yesterday to copy.");break}
+      if((String(p.today.exam||"").trim()||String(p.examNotes||"").trim()||exHas(p.today.ex))&&!confirm("Replace today's exam with yesterday's?"))break;
+      p.today.exam=p.prior.exam||"";p.examNotes=(p.priorExam||{}).notes||"";p.today.ex=clone(p.prior.ex||{});
+      p.examOld=!!(src||srcX);p.examNotesOld=!!srcN;p.examFrom=p.prior.exDate||(p.prior.dates||{}).exam||(p.priorExam||{}).date||"";
+      ["today.exam","examNotes","examOld","examNotesOld","examFrom"].forEach(k=>markTs(k));markAll(p,"today.ex",p.today.ex);
       rerender();toast("Copied yesterday's exam — gray until you re-examine and edit it.");break}
     case"addPt":{const n=newPatient();S.patients.push(n);cur=n.id;listOn=false;mode="edit";render();scrollTo(0,0);save();{const f=document.querySelector('[data-k="name"]');f&&f.focus({preventScroll:true})}break}
     case"delPt":if(confirm("Remove "+(p.name||"this patient")+" and all their notes?")){S.deleted=S.deleted||{};S.deleted[cur]=Date.now();S.patients=S.patients.filter(x=>x.id!==cur);cur=S.patients[0]?.id||null;render();save()}break;
@@ -2904,6 +3078,14 @@ document.addEventListener("click",e=>{
     case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
     case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
     case"undo":undoMove();break;
+    case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);rerender();break}
+    case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(true);rerender();break}
+    case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(true);
+      b.classList.toggle("on",j<0);save();break}
+    case"exAll":p.today.ex=p.today.ex||{};EXSYS.forEach(([k])=>{const e=p.today.ex[k]=p.today.ex[k]||{};if(!e.s)e.s=1;markTs("today.ex."+k)});exFresh(true);rerender();break;
+    case"exClear":if(exHas(p.today.ex)&&!confirm("Clear today's exam boxes?"))break;p.today.ex={};EXSYS.forEach(([k])=>markTs("today.ex."+k));exFresh(true);rerender();break;
+    case"addRow":{const kd=b.dataset.kind;p[kd]=p[kd]||[];p[kd].push(kd==="cons"?{svc:"",st:"",recs:""}:{date:today(),st:kd==="cx"?"Pending":""});markTs(kd);rerender();break}
+    case"delRow":{const kd=b.dataset.kind,r=p[kd][i];const lbl=kd==="cx"?cxText(r):kd==="img"?imgText(r):consText(r);if(!confirm("Remove "+lbl+"?"))break;p[kd].splice(i,1);markTs(kd);rerender();break}
     case"apKeep":p.problems[i].old={};markTs("problems");rerender();break;
     case"apKeepAll":p.onelinerOld=false;p.problems.forEach(pr=>pr.old={});markTs("problems");markTs("onelinerOld");rerender();break;
     case"newDayAll":hide("menu");if(S.patients.length&&confirm("Start a new day for ALL "+S.patients.length+" patients?")){S.patients.forEach(rollover);rerender()}break;
@@ -2921,6 +3103,11 @@ function apBanner(p){
   const any=p.onelinerOld||p.problems.some(pr=>pr.old&&Object.keys(pr.old).length);
   if(!any)return"";
   return `<div class="oldbar">Gray = carried over from ${esc(mmdd(p.apFrom)||"yesterday")}. Edit a field to make it current, or tap ✓ if it's unchanged. <button data-act="apKeepAll">Mark all current</button></div>`;
+}
+function exFresh(skipRender){
+  const p=P();if(!p.examOld)return;p.examOld=false;markTs("examOld");
+  const bx=$("exBox");if(bx){bx.classList.remove("old");const ob=bx.querySelector(".oldbar");if(ob)ob.remove()}
+  const n=$("main").querySelector('[data-k="today.exam"]');if(n)n.classList.remove("old");
 }
 function unGray(k,el){
   const p=P();el.classList.remove("old");
@@ -2940,7 +3127,7 @@ function rollover(p){
   p.todos=(p.todos||[]).filter(x=>x.t.trim()&&!x.done);
   p.examOld=false;p.examNotesOld=false;
   const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
-  p.today=Object.assign({date:today(),lab:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
+  p.today=Object.assign({date:today(),lab:{},vit:{},ios:{},ex:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
   p.medsChk={};p.examChk={};p.apChk={};p.examNotes="";p.updated=Date.now();p.epoch=Date.now();p.ts={};
 }
