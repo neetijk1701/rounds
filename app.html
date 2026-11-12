@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- Network: only this site itself. No third parties. With sync off, the only requests are loading the app; with sync on, encrypted blobs go to /api. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: 'self' blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -276,9 +276,18 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 </div></div>
 
 <div id="toast" class="hidden noprint"></div>
+<div class="ov hidden" id="ovScan"><div class="box" style="text-align:center">
+  <h2>Scan pairing code</h2>
+  <p>On your other device: Sync devices → Show pairing QR. Point this camera at it.</p>
+  <video id="scanVid" playsinline muted autoplay style="width:100%;border-radius:10px;background:#000"></video>
+  <canvas id="scanCv" class="hidden"></canvas>
+  <div class="err" id="scanErr"></div>
+  <button class="btn" id="scanCancel">Cancel</button>
+</div></div>
 <div class="sheet hidden" id="syncSheet"><div class="box" id="syncBox"></div></div>
 
 <script>/*QRLIB*/</script>
+<script>/*QRSCAN*/</script>
 <script>
 "use strict";
 /* ---------- content from Outline v3 ---------- */
@@ -1058,6 +1067,25 @@ async function handlePendingPair(){
   if(S.sync)syncStop();
   if(await joinSync(c))openSync();
 }
+$("syncSheet").addEventListener("input",e=>{if(e.target.id==="joinCode"&&normCode(e.target.value).length===24&&!S.sync)joinSync(e.target.value)});
+let scanStream=null,scanRaf=0;
+async function startScan(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("This browser can't open the camera here. Use paste or type the code.");return}
+  $("scanErr").textContent="";show("ovScan");
+  try{scanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false})}
+  catch(err){$("scanErr").textContent="Camera not available ("+(err.name||"blocked")+"). Allow camera access, or use paste.";return}
+  const v=$("scanVid"),cv=$("scanCv"),cx=cv.getContext("2d",{willReadFrequently:true});v.srcObject=scanStream;try{await v.play()}catch(e){}
+  const tick=()=>{
+    if(!scanStream)return;
+    if(v.readyState>=2&&v.videoWidth){const w=Math.min(640,v.videoWidth),h=Math.round(v.videoHeight*w/v.videoWidth);cv.width=w;cv.height=h;cx.drawImage(v,0,0,w,h);
+      const r=jsQR(cx.getImageData(0,0,w,h).data,w,h,{inversionAttempts:"dontInvert"});
+      if(r&&r.data){const m=r.data.match(/pair=([A-Za-z0-9-]+)/),c=normCode(m?m[1]:r.data);
+        if(c.length===24){stopScan();joinSync(c).then(ok=>{if(ok)toast("Linked ✓")});return}}}
+    scanRaf=requestAnimationFrame(tick)};
+  scanRaf=requestAnimationFrame(tick);
+}
+function stopScan(){cancelAnimationFrame(scanRaf);if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}$("scanVid").srcObject=null;hide("ovScan")}
+$("scanCancel").onclick=stopScan;
 function openSync(){renderSyncBox();show("syncSheet")}
 function renderSyncBox(){
   const box=$("syncBox");if(!S){box.innerHTML="";return}
@@ -1066,8 +1094,9 @@ function renderSyncBox(){
     h+=`<p class="note" style="margin:0 0 8px">End-to-end encrypted: notes are locked on this device before upload, and only your paired devices hold the key. The server stores scrambled data it can't read and deletes it after 30 days without use. It does see a random vault ID, when and how often you sync, the size of the data, and your IP address. Encryption alone doesn't make this institutionally approved for patient information.</p>
     <button class="btn pri" data-sync="start">Turn on sync (first device)</button>
     <p class="note">Already turned on elsewhere? Scan its QR code, or type its code here:</p>
-    <button class="btn pri" data-sync="paste">📋 Paste code &amp; link</button>
-    <p class="note" style="margin-top:6px">Copy the code on your other device first (Sync devices → Copy code). Apple devices on the same Apple ID share a clipboard. Or type it:</p>
+    <button class="btn pri" data-sync="scan">📷 Scan code from other screen</button>
+    <button class="btn" data-sync="paste">📋 Paste copied code</button>
+    <p class="note" style="margin-top:6px">Or long-press this box → Paste (it links as soon as a full code is in):</p>
     <input type="text" id="joinCode" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off" spellcheck="false">
     <button class="btn" data-sync="join">Link this device</button>`;
   }else{
@@ -1076,7 +1105,7 @@ function renderSyncBox(){
     const when=lastSyncAt?new Date(lastSyncAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"—";
     h+=`<p class="note" style="margin:0">Status: <b>${syncStatus==="ok"?"Synced":syncStatus==="busy"?"Syncing…":syncStatus==="offline"?"Offline — will sync when back online":"Off"}</b> · last ${when}</p>
     <p class="note">To add your other device: scan this with its camera, or type the code into its Sync screen. Anyone with this code can read your synced notes — don't share it.</p>
-    <details style="margin:6px 0"><summary>Show pairing QR &amp; code</summary><div class="body"><div class="qr">${svg}</div><div class="code">${esc(code)}</div></div></details>
+    <details style="margin:6px 0" open><summary>Pairing QR &amp; code</summary><div class="body"><div class="qr">${svg}</div><div class="code">${esc(code)}</div></div></details>
     <button class="btn pri" data-sync="copy">📋 Copy code</button>
     <button class="btn" data-sync="now">Sync now</button>
     <button class="btn" data-sync="off">Turn off sync on this device</button>
@@ -1097,7 +1126,8 @@ $("syncSheet").addEventListener("click",async e=>{
   else if(a==="paste"){
     let t="";try{t=await navigator.clipboard.readText()}catch(err){}
     if(normCode(t).length===24){$("joinCode").value=t;joinSync(t)}
-    else{$("joinCode").focus();toast("Nothing to paste — copy the code on the other device first, or paste into the box.")}}
+    else{$("joinCode").focus();toast("Couldn't read the clipboard — long-press the box and tap Paste, or use Scan.")}}
+  else if(a==="scan")startScan();
   else if(a==="now")sync();
   else if(a==="off"){if(confirm("Stop syncing on this device? Notes already here stay here.")){syncStop();S.sync=null;try{ls().removeItem(LS_VAULT)}catch(e){}await saveNow();renderSyncBox()}}
   else if(a==="erase"){

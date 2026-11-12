@@ -11,10 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "jsqr": "^1.4.0",
     "qrcode-generator": "^1.5.2"
   },
   "private": true,
   "devDependencies": {
+    "terser": "^5.51.2",
     "wrangler": "^4.160.0"
   }
 }

@@ -1,4 +1,10 @@
 const fs=require("fs");
-const lib=fs.readFileSync(require.resolve("qrcode-generator/qrcode.js"),"utf8").replace(/<\/script/gi,"<\\/script");
-fs.writeFileSync("public/index.html",fs.readFileSync("app.html","utf8").replace("/*QRLIB*/",()=>lib));
-console.log("built", fs.statSync("public/index.html").size);
+const {minify}=require("terser");
+(async()=>{
+  const esc=s=>s.replace(/<\/script/gi,"<\\/script");
+  const qr=esc(fs.readFileSync(require.resolve("qrcode-generator/qrcode.js"),"utf8"));
+  const scan=esc((await minify(fs.readFileSync(require.resolve("jsqr/dist/jsQR.js"),"utf8"))).code);
+  const out=fs.readFileSync("app.html","utf8").replace("/*QRLIB*/",()=>qr).replace("/*QRSCAN*/",()=>scan);
+  fs.writeFileSync("public/index.html",out);
+  console.log("built",out.length);
+})();
