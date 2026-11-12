@@ -101,6 +101,15 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+.story{background:var(--card);border:2px solid var(--acc2);border-radius:12px;padding:10px 12px;margin:10px 0}
+.story.stale-s{border-color:var(--warn)}
+.story .sh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.story .sh b{color:var(--acc2);letter-spacing:.06em}
+.story.stale-s .sh b{color:var(--warn)}
+.story .sh .meta{margin:0;flex:1}
+.story textarea{font-size:16px;line-height:1.45}
+.story.pst{font-size:17px;margin:8px 0 4px}
+.ol.tldr{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .mv{background:none;border:1px solid var(--line);color:var(--acc2);border-radius:6px;padding:0 7px;font-size:12px;font-weight:600;line-height:18px;text-transform:none;letter-spacing:0}
 .subh{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:16px 0 6px;padding-top:10px;border-top:1px dashed var(--line)}
 .subh>span{flex:1}
@@ -2885,6 +2894,7 @@ function renderPresent(p){
   $("main").innerHTML=`<div class="pres">
     <div class="ph1">${esc(p.name)||"Patient"}</div>
     <div class="ph2">${[p.room&&"Rm "+esc(p.room),p.code&&"Code: "+esc(p.code),T.date&&esc(mmdd(T.date))].filter(Boolean).join(" · ")}</div>
+    ${filled(p.story)?`<div class="story pst ${p.storyOld?"stale-s":""}"><div class="sh"><b>TL;DR</b><span class="meta">${esc(storyStamp(p))}</span>${p.storyOld?`<span class="stale">not updated since yesterday</span>`:""}</div><div class="${p.storyOld?"oldtxt":""}">${esc(p.story).replace(/\n/g,"<br>")}</div></div>`:""}
     ${unv.length?`<div class="warnbar">Not verified yet: ${unv.join(", ")}</div>`:""}
     ${sec("One-liner",p.oneliner.trim()?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")}
     ${sec("Overnight",txt(p.on))}
@@ -2933,8 +2943,8 @@ function renderList(){
     const stale=p.onelinerOld||p.problems.some(pr=>pr.old&&Object.keys(pr.old).length);
     const unv=((p.today||{}).verify||[]).filter(v=>v.t.trim()&&!v.done).length;
     return `<div class="card"><button class="ch" data-act="open" data-id="${p.id}"><b>${p.room?"Rm "+esc(p.room):"—"}</b><span class="nm">${esc(p.name)||"New patient"}</span><span class="pct">${progress(p)}% ›</span></button>
-      ${p.oneliner.trim()?`<div class="ol ${p.onelinerOld?"oldtxt":""}">${esc(p.oneliner)}</div>`:""}
-      <div>${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
+      ${filled(p.story)?`<div class="ol tldr ${p.storyOld?"oldtxt":""}">${esc(p.story)}</div>`:p.oneliner.trim()?`<div class="ol ${p.onelinerOld?"oldtxt":""}">${esc(p.oneliner)}</div>`:""}
+      <div>${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${p.storyOld&&filled(p.story)?`<span class="bdg">TL;DR needs update</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
       ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}</span></label>`).join("")}
     </div>`;
   }).join("");
@@ -2959,6 +2969,7 @@ function render(){
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   $("main").innerHTML=`
+  ${storyCard(p)}
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}<div>${tx("code","Code status")}<div class="chips" style="margin-top:4px">${CODES.map(c=>`<button class="chip ${p.code===c?"on":""}" data-act="pick" data-k="code" data-v="${c}">${c}</button>`).join("")}</div></div></div>
     <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
@@ -3033,6 +3044,7 @@ $("main").addEventListener("input",e=>{
   if(/^today\.ex\./.test(k))exFresh();
   if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
+  if(k==="story")storyFresh(P(),t);
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
 });
@@ -3078,6 +3090,7 @@ document.addEventListener("click",e=>{
     case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
     case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
     case"undo":undoMove();break;
+    case"storyOk":storyFresh(p);save();break;
     case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);rerender();break}
     case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(true);rerender();break}
     case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(true);
@@ -3118,7 +3131,25 @@ function unGray(k,el){
   const b=$("main").querySelector(".oldbar");if(b&&!$("main").querySelector(".old"))b.remove();
   const i=k.match(/^problems\.(\d+)\./);if(i&&!Object.keys(p.problems[+i[1]].old||{}).length){const kb=$("main").querySelector(`[data-act="apKeep"][data-i="${i[1]}"]`);if(kb)kb.remove()}
 }
+function storyStamp(p){
+  if(!p.storyAt)return"";const d=new Date(p.storyAt);
+  return "Updated "+(d.getMonth()+1)+"/"+d.getDate()+" "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+}
+function storyCard(p){
+  const old=p.storyOld&&filled(p.story);
+  return `<div class="story ${old?"stale-s":""}" id="storyCard"><div class="sh"><b>TL;DR</b><span class="meta" id="storyStamp">${esc(storyStamp(p))}</span>
+    ${old?`<span class="stale" id="storyFlag">update after rounds</span><button class="mini keep" data-act="storyOk" id="storyOkBtn">✓ Still accurate</button>`:""}</div>
+    <textarea rows="2" data-k="story" class="${old?"old":""}" placeholder="The brief story: who they are, why they're here, what's happened, where it's headed">${esc(p.story||"")}</textarea></div>`;
+}
+function storyFresh(p,el){
+  p.storyAt=Date.now();markTs("storyAt",p);
+  if(p.storyOld){p.storyOld=false;markTs("storyOld",p);
+    ["storyFlag","storyOkBtn"].forEach(id=>{const n=$(id);if(n)n.remove()});const c=$("storyCard");if(c)c.classList.remove("stale-s");
+    const t=c&&c.querySelector("textarea");if(t)t.classList.remove("old")}
+  const s=$("storyStamp");if(s)s.textContent=storyStamp(p);
+}
 function rollover(p){
+  if(filled(p.story))p.storyOld=true;
   // A&P carries forward, grayed out until you touch it
   if((p.oneliner||"").trim())p.onelinerOld=true;
   p.problems.forEach(pr=>{pr.old={};["p","a","pl"].forEach(fl=>{if((pr[fl]||"").trim())pr.old[fl]=1})});
