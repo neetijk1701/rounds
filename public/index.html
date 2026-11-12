@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- Hard block on all network access: nothing typed here can be sent anywhere. -->
+<!-- Network: only this site itself. No third parties. With sync off, the only requests are loading the app; with sync on, encrypted blobs go to /api. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -50,7 +50,7 @@ textarea{resize:none;min-height:38px;overflow:hidden;display:block}
 input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;border-color:transparent}
 .f>span .mv{float:right}
 .f>span .dt{font-style:normal;font-weight:500;color:var(--warn)}
-#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:#1b2430;color:#fff;padding:10px 14px;border-radius:10px;z-index:30;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:92vw}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(64px + env(safe-area-inset-bottom));background:#1b2430;color:#fff;padding:10px 14px;border-radius:10px;z-index:30;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:92vw}
 #toast button{background:none;border:0;color:#9cc3ff;font-weight:700;margin-left:8px}
 .old{color:var(--mute)!important;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(127,127,127,.07) 6px 12px)!important;font-style:italic}
 .oldbar{background:rgba(127,127,127,.12);color:var(--mute);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:8px}
@@ -101,6 +101,17 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+.partial{color:var(--warn);font-weight:600}
+.na{color:var(--mute);font-size:.85em;margin-top:4px}
+.tst{font:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 4px;flex:none}
+.tsb{display:inline-block;font-size:11px;font-weight:700;color:var(--acc2);border:1px solid var(--acc2);border-radius:5px;padding:0 5px;margin-left:4px;vertical-align:middle}
+#storyCard,#secTodo,#secToday,#secExam,#secLabs,#secAP{scroll-margin-top:100px}
+.jump{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;gap:2px;justify-content:center;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.jump button{flex:1;max-width:110px;background:none;border:0;color:var(--acc2);font-weight:700;font-size:14px;padding:8px 2px;border-radius:8px}
+.jump button:active{background:rgba(127,127,127,.12)}
+#title.flash{animation:fl 1s ease}
+@keyframes fl{0%{background:#ffd34d;color:#1b2430}100%{background:transparent}}
+#title{border-radius:6px;padding:0 4px;margin-left:-4px}
 .story{background:var(--card);border:2px solid var(--acc2);border-radius:12px;padding:10px 12px;margin:10px 0}
 .story.stale-s{border-color:var(--warn)}
 .story .sh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
@@ -233,7 +244,8 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 <!-- First run / lock screens -->
 <div class="ov hidden" id="ovSetup"><div class="box">
   <h2>Rounds</h2>
-  <p>Everything you type stays in this browser on this device. The page cannot make network requests.</p>
+  <p>What you type is saved in this browser on this device. With sync off, the page only talks to the internet to load the app itself, never to send your notes. If you turn on sync, notes are encrypted here first and the server receives only scrambled data.</p>
+  <p><b>A personal study aid, not the medical record.</b> Check your institution's rules before entering patient information; use initials and room numbers.</p>
   <p>Set a passcode to encrypt what's saved here (recommended). There is no recovery if you forget it.</p>
   <input type="password" id="setP1" placeholder="Passcode" autocomplete="new-password">
   <input type="password" id="setP2" placeholder="Confirm passcode" autocomplete="new-password" style="margin-top:8px">
@@ -2710,7 +2722,8 @@ function progress(p){
   const done=Object.values(p.medsChk).filter(Boolean).length+Object.values(p.examChk).filter(Boolean).length+Object.values(p.apChk).filter(Boolean).length;
   return Math.round(100*done/total);
 }
-function tabLabel(p,i){const n=(p.room||"").trim()||(p.name||"").trim().split(/[ ,]/)[0]||("Pt "+(i+1));return n.slice(0,14)}
+function tabLabel(p,i){const r=(p.room||"").trim(),nm=(p.name||"").trim().split(/[ ,]/)[0]||"";const s=r&&nm?r+" · "+nm:(r||nm||("Pt "+(i+1)));return s.slice(0,20)}
+function flashId(){const t=$("title");t.classList.remove("flash");void t.offsetWidth;t.classList.add("flash")}
 function renderTabs(){
   $("tabs").innerHTML=(S.patients.length?`<button class="tab all ${listOn?"on":""}" data-act="list">▤ All</button>`:"")+S.patients.map((p,i)=>`<button class="tab ${p.id===cur&&!listOn?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
 }
@@ -2754,7 +2767,7 @@ function markAll(p,path,o){
   else markTs(path,p);
 }
 /* Move today's values into Prior (per field). Blank fields are skipped so older Prior values aren't wiped. */
-let undoSnap=null,toastT=null;
+let undoSnap=null,toastT=null,dayUndo=null;
 function moveValues(p,keys,track=true){
   const T=p.today,Pr=p.prior,d=T.date||today();
   const has=k=>filled(T[k])||(STRUCT[k]&&anyIn(T[STRUCT[k][0]],STRUCT[k][1]))||(k==="exam"&&exHas(T.ex));
@@ -2780,7 +2793,7 @@ function undoMove(){
   if(p.id===cur){const y=scrollY;render();scrollTo(0,y)}save();
 }
 function toast(msg,undo){
-  const t=$("toast");t.innerHTML=esc(msg)+(undo?' <button data-act="undo">Undo</button>':"");t.classList.remove("hidden");
+  const t=$("toast");t.innerHTML=esc(msg)+(undo?` <button data-act="${undo===true?"undo":undo}">Undo</button>`:"");t.classList.remove("hidden");
   clearTimeout(toastT);toastT=setTimeout(hideToast,undo?8000:2500);
 }
 function hideToast(){$("toast").classList.add("hidden")}
@@ -2810,7 +2823,7 @@ function fish(p,which,ro){
   const c=a=>ncell(p,which,"lab",a,AN[a][1],ro);
   const any=keys=>!ro||keys.some(a=>filled(getPath(p,which+".lab."+a)));
   const pd=priorDate(p,"lab"),hint=which==="today"&&pd&&!ro?` · arrows vs ${esc(mmdd(pd))}`:"";
-  return `${ro?"":`<div class="fbh">BMP · CBC · Ca/Mg/Phos${hint}</div>`}<div class="fishes">
+  return `${ro?"":`<div class="fbh">BMP · CBC · Ca/Mg/Phos${hint} · colors use generic adult ranges, not your lab's</div>`}<div class="fishes">
     ${any(BMP.map(x=>x[0]))?`<div class="fb bmp"><div class="g">${c("na")}${c("cl")}${c("bun")}${c("k")}${c("co2")}${c("cr")}</div><div class="glu">${c("glu")}</div></div>`:""}
     ${any(CBC.map(x=>x[0]))?`<div class="fb cbc">${c("wbc")}<div class="mid">${c("hgb")}${c("hct")}</div>${c("plt")}</div>`:""}
     ${any(XTRA.map(x=>x[0]))?`<div class="fb xtra">${c("ca")}${c("mg")}${c("phos")}</div>`:""}</div>`;
@@ -2826,10 +2839,11 @@ function vitBox(p,which){
 }
 function ioNet(io){
   if(!io||!anyIn(io,["po","iv","uop","drain"]))return null;
-  const n=k=>num(io[k])||0, i=n("po")+n("iv"), o=n("uop")+n("drain");
-  return {i,o,net:i-o};
+  const n=k=>num(io[k])||0, hasIn=anyIn(io,["po","iv"]), hasOut=anyIn(io,["uop","drain"]);
+  const i=n("po")+n("iv"), o=n("uop")+n("drain");
+  return {i,o,hasIn,hasOut,net:hasIn&&hasOut?i-o:null};
 }
-const fmtNet=r=>r?`In ${r.i} · Out ${r.o} · <b>Net ${r.net>0?"+":""}${r.net} mL</b>`:"";
+const fmtNet=r=>r?`In ${r.hasIn?r.i:"—"} · Out ${r.hasOut?r.o:"—"} · ${r.net===null?`<span class="partial">Net not calculable — enter ${r.hasIn?"output":"intake"} (type 0 if truly none)</span>`:`<b>Net ${r.net>0?"+":""}${r.net} mL</b>`}`:"";
 function ioBox(p,which){
   const io=getPath(p,which+".ios")||{},c=(a,l)=>ncell(p,which,"ios",a,l,false);
   return `<div class="fishes"><div class="fb io"><div class="iog"><span class="ln">IN</span>${c("po","PO mL")}${c("iv","IV mL")}</div>
@@ -2886,8 +2900,9 @@ function renderPresent(p){
   const abn=abnL.length?`<b>Flagged:</b> ${abnL.join(", ")}`:"";
   const probs=p.problems.filter(pr=>(pr.p+pr.a+pr.pl).trim()).map((pr,i)=>{const old=pr.old&&Object.keys(pr.old).length;
     return `<div class="pp ${old?"oldtxt":""}"><b>${i+1}. ${esc(pr.p)||"(untitled)"}</b>${old?stale(p.apFrom):""}${pr.a.trim()?`<div>${esc(pr.a).replace(/\n/g,"<br>")}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("");
-  const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}</li>`).join("");
-  const exL=exLines(T.ex).map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("");
+  const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}${t.st?` <span class="tsb">${esc(t.st)}</span>`:""}</li>`).join("");
+  const exArr=exLines(T.ex),notA=EXSYS.filter(([k])=>!((T.ex||{})[k]||{}).s&&!filled(((T.ex||{})[k]||{}).t)).map(x=>x[1]);
+  const exL=exArr.map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")+(exArr.length&&notA.length?`<div class="na">Not assessed: ${esc(notA.join(", "))}</div>`:"");
   const exam=(p.examOld&&(String(T.exam||"").trim()||exL)?`<span class="stale">copied from ${esc(mmdd(p.examFrom)||"yesterday")} — re-examine</span>`:"")+
     `<div class="${p.examOld?"oldtxt":""}">${exL}${txt(T.exam)}</div>`+(abn?`<p class="abn">${abn}</p>`:"")+`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`;
   const i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1];
@@ -2927,7 +2942,10 @@ function vitLine(p){
 }
 function ioLine(p){
   const io=(p.today||{}).ios||{},r=ioNet(io),bits=[];
-  if(r){bits.push(`In ${r.i}${filled(io.po)||filled(io.iv)?` (PO ${esc(io.po||0)}, IV ${esc(io.iv||0)})`:""}`);bits.push(`Out ${r.o}${filled(io.uop)?` (UOP ${esc(io.uop)}${filled(io.drain)?", drain "+esc(io.drain):""})`:""}`);bits.push(`<b>Net ${r.net>0?"+":""}${r.net} mL</b>`)}
+  if(r){const part=(k,l)=>filled(io[k])?`${l} ${esc(io[k])}`:`${l} —`;
+    bits.push(r.hasIn?`In ${r.i} (${part("po","PO")}, ${part("iv","IV")})`:"In —");
+    bits.push(r.hasOut?`Out ${r.o} (${part("uop","UOP")}, ${part("drain","drain")})`:"Out —");
+    bits.push(r.net===null?`<span class="partial">net not calculable (incomplete)</span>`:`<b>Net ${r.net>0?"+":""}${r.net} mL</b>`)}
   if(filled(io.stool))bits.push(`Stool ×${esc(io.stool)}`);
   return bits.length?`<p>${bits.join(" · ")}</p>`:"";
 }
@@ -2945,7 +2963,7 @@ function renderList(){
     return `<div class="card"><button class="ch" data-act="open" data-id="${p.id}"><b>${p.room?"Rm "+esc(p.room):"—"}</b><span class="nm">${esc(p.name)||"New patient"}</span><span class="pct">${progress(p)}% ›</span></button>
       ${filled(p.story)?`<div class="ol tldr ${p.storyOld?"oldtxt":""}">${esc(p.story)}</div>`:p.oneliner.trim()?`<div class="ol ${p.onelinerOld?"oldtxt":""}">${esc(p.oneliner)}</div>`:""}
       <div>${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${p.storyOld&&filled(p.story)?`<span class="bdg">TL;DR needs update</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
-      ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}</span></label>`).join("")}
+      ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}${t.st&&!t.done?` <span class="tsb">${esc(t.st)}</span>`:""}</span></label>`).join("")}
     </div>`;
   }).join("");
   $("main").innerHTML=`<p class="sumline">${S.patients.length} patient${S.patients.length>1?"s":""} · ${openTotal} open to-do${openTotal===1?"":"s"}</p>${cards}`;
@@ -2962,10 +2980,10 @@ function render(){
   if(listOn){$("main").dataset.pid="";renderList();return}
   const p=P();
   if(p&&mode==="present"){$("main").dataset.pid="";$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");renderPresent(p);return}
-  if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Data stays in this browser on this device.<br>The page is blocked from making any network requests.</p></div>`;$("title").textContent="Rounds";return}
+  if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Notes are saved in this browser on this device. They only leave it if you turn on sync, and then only encrypted.<br>A personal study aid, not the medical record.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
-  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   $("main").innerHTML=`
@@ -2974,21 +2992,21 @@ function render(){
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}<div>${tx("code","Code status")}<div class="chips" style="margin-top:4px">${CODES.map(c=>`<button class="chip ${p.code===c?"on":""}" data-act="pick" data-k="code" data-v="${c}">${c}</button>`).join("")}</div></div></div>
     <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
 
-  <details open><summary>To-do <span class="cnt" id="cntTodo">${openTodos} open</span></summary><div class="body">
+  <details open id="secTodo"><summary>To-do <span class="cnt" id="cntTodo">${openTodos} open</span></summary><div class="body">
     ${todos}<button class="add" data-act="addTodo">＋ To-do</button>
     <p class="meta">Open to-dos carry over each day. Checked ones clear on New day.</p></div></details>
 
   <details><summary>Background</summary><div class="body"><div class="grid two">${BACKGROUND.map(([k,l])=>ta(k,l)).join("")}</div></div></details>
 
-  <details open><summary>Today's values — verified this AM</summary><div class="body">
+  <details open id="secToday"><summary>Today's values — verified this AM</summary><div class="body">
     <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
     <label class="f"><span>Labs to verify before rounds</span></label>${verify}
     <button class="add" data-act="addVerify">＋ Lab to verify</button>
     <button class="btn" data-act="mvAll" style="width:100%;margin:12px 0 4px">⇢ Move all of today's values to Prior</button>
     ${subh("today","vitals","Vitals")}${vitBox(p,"today")}${ta("today.vitals","Vitals notes (ranges, events)")}
-    ${subh("today","io","I/O")}${ioBox(p,"today")}${ta("today.io","I/O notes")}
-    ${subh("today","exam","Exam")}${exBox(p)}<div style="margin-top:6px">${ta("today.exam","Exam — other findings")}</div>
-    ${subh("today","labs","Labs")}${fish(p,"today",false)}${ta("today.labs","Other labs")}
+    ${subh("today","io","I/O (24 h)")}${ioBox(p,"today")}${ta("today.io","I/O notes")}
+    <div id="secExam"></div>${subh("today","exam","Exam")}${exBox(p)}<div style="margin-top:6px">${ta("today.exam","Exam — other findings")}</div>
+    <div id="secLabs"></div>${subh("today","labs","Labs")}${fish(p,"today",false)}${ta("today.labs","Other labs")}
     ${subh("today","path","Pathology")}${ta("today.path","Pathology")}</div></details>
 
   <details open><summary>Cultures <span class="cnt">${(p.cx||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cx")}<div style="margin-top:6px">${fieldTA("today","cultures","Culture notes")}</div></div></details>
@@ -2998,7 +3016,7 @@ function render(){
   <details><summary>Prior values <span class="cnt"></span></summary><div class="body">
     <div class="warnbar">⚠️ Trend / context only — DO NOT present as current</div>
     ${subh("prior","vitals","Vitals")}${vitBox(p,"prior")}${ta("prior.vitals","Vitals notes")}
-    ${subh("prior","io","I/O")}${ioBox(p,"prior")}${ta("prior.io","I/O notes")}
+    ${subh("prior","io","I/O (24 h)")}${ioBox(p,"prior")}${ta("prior.io","I/O notes")}
     ${subh("prior","exam","Exam")}${exLines(p.prior.ex).map(x=>`<div class="exl ${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")}${ta("prior.exam","Exam — other findings")}
     ${subh("prior","labs","Labs")}${fish(p,"prior",false)}${ta("prior.labs","Other labs")}
     <div class="grid two" style="margin-top:8px">${["path","cultures","imaging","consults"].map(k=>fieldTA("prior",k,VALUES.find(v=>v[0]===k)[1])).join("")}</div></div></details>
@@ -3012,10 +3030,11 @@ function render(){
 
   <details open><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
 
-  <details open><summary>Assessment &amp; plan</summary><div class="body">
+  <details open id="secAP"><summary>Assessment &amp; plan</summary><div class="body">
     ${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
     <button class="add" data-act="addProb">＋ Problem</button></div></details>
 
+  <nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>
   <div class="toolbar noprint">
     <button class="btn" data-act="newDay">☀️ New day for this patient</button>
     <button class="btn danger" data-act="delPt">Remove patient</button>
@@ -3061,8 +3080,8 @@ document.addEventListener("click",e=>{
   const a=b.dataset.act,p=S&&cur?P():null,i=+b.dataset.i;
   const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
   switch(a){
-    case"tab":cur=b.dataset.id;listOn=false;render();scrollTo(0,0);break;
-    case"open":cur=b.dataset.id;listOn=false;mode="edit";render();scrollTo(0,0);break;
+    case"tab":cur=b.dataset.id;listOn=false;render();scrollTo(0,0);flashId();break;
+    case"open":cur=b.dataset.id;listOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
     case"list":listOn=true;render();scrollTo(0,0);break;
     case"present":mode=mode==="present"?"edit":"present";render();scrollTo(0,0);break;
     case"todoChk":{const pt=S.patients.find(x=>x.id===b.dataset.pid);if(!pt)break;const td=pt.todos[i];td.done=b.checked;markTs("todos",pt);pt.updated=Date.now();
@@ -3086,11 +3105,15 @@ document.addEventListener("click",e=>{
     case"delProb":{const pr=p.problems[i];if((pr.p||pr.a||pr.pl)&&!confirm("Remove problem "+(i+1)+(pr.p?" ("+pr.p+")":"")+"?"))break;markTs("problems");p.problems.splice(i,1);rerender();break}
     case"up":if(i>0){markTs("problems");[p.problems[i-1],p.problems[i]]=[p.problems[i],p.problems[i-1]];rerender()}break;
     case"down":if(i<p.problems.length-1){markTs("problems");[p.problems[i+1],p.problems[i]]=[p.problems[i],p.problems[i+1]];rerender()}break;
-    case"newDay":if(confirm("Start a new day for this patient? Today's values move to Prior and checklists reset.")){rollover(p);rerender()}break;
+    case"newDay":{
+      const again=p.today.date===today();
+      if(!confirm(again?"You've already started today for this patient (today's date is "+mmdd(today())+"). Running New day again moves what you've entered today into Prior. Continue?":"Start a new day for this patient? Today's values move to Prior, the A&P and TL;DR are flagged for update, and checklists reset."))break;
+      dayUndo=[clone(p)];rollover(p);rerender();toast("New day started.","undoDay");break}
     case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
     case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
     case"undo":undoMove();break;
     case"storyOk":storyFresh(p);save();break;
+    case"jump":{const el=$(b.dataset.to);if(!el)break;const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({behavior:"smooth",block:"start"});break}
     case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);rerender();break}
     case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(true);rerender();break}
     case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(true);
@@ -3101,7 +3124,13 @@ document.addEventListener("click",e=>{
     case"delRow":{const kd=b.dataset.kind,r=p[kd][i];const lbl=kd==="cx"?cxText(r):kd==="img"?imgText(r):consText(r);if(!confirm("Remove "+lbl+"?"))break;p[kd].splice(i,1);markTs(kd);rerender();break}
     case"apKeep":p.problems[i].old={};markTs("problems");rerender();break;
     case"apKeepAll":p.onelinerOld=false;p.problems.forEach(pr=>pr.old={});markTs("problems");markTs("onelinerOld");rerender();break;
-    case"newDayAll":hide("menu");if(S.patients.length&&confirm("Start a new day for ALL "+S.patients.length+" patients?")){S.patients.forEach(rollover);rerender()}break;
+    case"newDayAll":{hide("menu");if(!S.patients.length)break;
+      const again=S.patients.filter(x=>x.today.date===today()).length;
+      if(!confirm("Start a new day for ALL "+S.patients.length+" patients?"+(again?"\n\n"+again+" of them already have today's date — their entries from today will move to Prior.":"")))break;
+      dayUndo=S.patients.map(clone);S.patients.forEach(rollover);rerender();toast("New day started for all patients.","undoDay");break}
+    case"undoDay":{hideToast();if(!dayUndo)break;
+      for(const snap of dayUndo){const ix=S.patients.findIndex(x=>x.id===snap.id);if(ix<0)continue;snap.epoch=Date.now();snap.ts={};snap.updated=Date.now();S.patients[ix]=snap}
+      dayUndo=null;rerender();toast("New day undone.");break}
     case"menu":show("menu");break;
     case"closeMenu":hide("menu");break;
     case"print":hide("menu");document.querySelectorAll("details").forEach(d=>d.open=true);document.querySelectorAll("textarea").forEach(grow);setTimeout(()=>print(),50);break;
@@ -3331,7 +3360,7 @@ function renderSyncBox(){
   const box=$("syncBox");if(!S){box.innerHTML="";return}
   let h=`<h3>🔄 Sync devices</h3>`;
   if(!S.sync){
-    h+=`<p class="note" style="margin:0 0 8px">End-to-end encrypted: notes are locked on this device before upload, and only your paired devices hold the key. The server stores scrambled data it can't read, and deletes it after 30 days without use.</p>
+    h+=`<p class="note" style="margin:0 0 8px">End-to-end encrypted: notes are locked on this device before upload, and only your paired devices hold the key. The server stores scrambled data it can't read and deletes it after 30 days without use. It does see a random vault ID, when and how often you sync, the size of the data, and your IP address. Encryption alone doesn't make this institutionally approved for patient information.</p>
     <button class="btn pri" data-sync="start">Turn on sync (first device)</button>
     <p class="note">Already turned on elsewhere? Scan its QR code, or type its code here:</p>
     <input type="text" id="joinCode" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off" spellcheck="false">
