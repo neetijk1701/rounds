@@ -101,6 +101,9 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+#privScreen{position:fixed;inset:0;z-index:100;background:#1f3a5f;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:22px;font-weight:700;line-height:1.6}
+#privScreen.hidden{display:none!important}
+.deid{font-size:12px;font-weight:600;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:3px 8px;margin-top:4px}
 .age{color:var(--warn);font-weight:700}
 .partial{color:var(--warn);font-weight:600}
 .na{color:var(--mute);font-size:.85em;margin-top:4px}
@@ -245,10 +248,10 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 
 <!-- First run / lock screens -->
 <div class="ov hidden" id="ovSetup"><div class="box">
-  <h2>Rounds</h2>
+  <h2 id="setTitle">Rounds</h2>
   <p>What you type is saved in this browser on this device. With sync off, the page only talks to the internet to load the app itself, never to send your notes. If you turn on sync, notes are encrypted here first and the server receives only scrambled data.</p>
   <p><b>A personal study aid, not the medical record.</b> Check your institution's rules before entering patient information; use initials and room numbers.</p>
-  <p>Set a passcode to encrypt what's saved here (recommended). There is no recovery if you forget it.</p>
+  <p id="setMsg">Set a passcode (at least 8 characters) to encrypt what's saved here. There is no recovery if you forget it.</p>
   <input type="password" id="setP1" placeholder="Passcode" autocomplete="new-password">
   <input type="password" id="setP2" placeholder="Confirm passcode" autocomplete="new-password" style="margin-top:8px">
   <div class="err" id="setErr"></div>
@@ -278,6 +281,7 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 </div></div>
 
 <div id="toast" class="hidden noprint"></div>
+<div id="privScreen" class="hidden"><div>🔒<br>Rounds</div></div>
 <div class="ov hidden" id="ovScan"><div class="box" style="text-align:center">
   <h2>Scan pairing code</h2>
   <p>On your other device: Sync devices → Show pairing QR. Point this camera at it.</p>
@@ -385,18 +389,29 @@ function boot(){
   const enc=L&&L.getItem(LS_ENC), plain=L&&L.getItem(LS_PLAIN);
   if(enc){show("ovLock");setTimeout(()=>$("lockP").focus(),50);return}
   if(plain){try{S=JSON.parse(plain)}catch(e){S=null}}
-  if(S){start();return}
+  if(S){start();if(hasCrypto())showSetup("require");return}
   S={patients:[]};
-  if(hasCrypto()&&canStore){show("ovSetup")}else{start()}
+  if(hasCrypto()&&canStore){showSetup("new")}else{start()}
 }
 function show(id){$(id).classList.remove("hidden")}
 function hide(id){$(id).classList.add("hidden")}
+const PASS_MIN=8;
+let setMode="new";   // new | require (existing unencrypted data) | upgrade (passcode too short)
+function showSetup(mode){
+  setMode=mode;$("setErr").textContent="";
+  const canSkip=!hasCrypto()||!canStore;
+  $("setSkip").classList.toggle("hidden",!canSkip||mode!=="new");
+  if(mode==="require"){$("setTitle").textContent="Set a passcode";$("setMsg").textContent="Your notes on this device aren't encrypted yet. Set a passcode (at least 8 characters) to keep using Rounds. There is no recovery if you forget it."}
+  if(mode==="upgrade"){$("setTitle").textContent="Choose a longer passcode";$("setMsg").textContent="Passcodes now need at least 8 characters, so a stolen device can't be unlocked by guessing. Your notes stay as they are."}
+  show("ovSetup");setTimeout(()=>$("setP1").focus(),50);
+}
 $("setGo").onclick=async()=>{
   const a=$("setP1").value,b=$("setP2").value;
-  if(a.length<4){$("setErr").textContent="Use at least 4 characters.";return}
+  if(a.length<PASS_MIN){$("setErr").textContent="Use at least "+PASS_MIN+" characters.";return}
   if(a!==b){$("setErr").textContent="Passcodes don't match.";return}
   salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(a,salt);
-  $("setP1").value=$("setP2").value="";hide("ovSetup");await saveNow();start();
+  $("setP1").value=$("setP2").value="";hide("ovSetup");await saveNow();
+  if(setMode==="new")start();else{render();resetIdle()}
 };
 $("setSkip").onclick=()=>{hide("ovSetup");start();saveNow()};
 async function unlock(){
@@ -404,7 +419,9 @@ async function unlock(){
   try{
     const s=unb64(rec.salt);const k=await derive($("lockP").value,s);
     const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(rec.iv)},k,unb64(rec.ct));
+    const short=$("lockP").value.length<PASS_MIN;
     S=JSON.parse(td.decode(pt));key=k;salt=s;$("lockP").value="";$("lockErr").textContent="";hide("ovLock");start();
+    if(short)showSetup("upgrade");
   }catch(e){$("lockErr").textContent="Wrong passcode.";$("lockP").select()}
 }
 $("lockGo").onclick=unlock;
@@ -423,9 +440,12 @@ function start(){
 }
 
 /* auto-lock: after LOCK_MIN minutes in background or idle */
+/* privacy screen: cover the page whenever it goes to the background, so app-switcher previews show nothing */
+const privOn=()=>$("privScreen").classList.remove("hidden"),privOff=()=>$("privScreen").classList.add("hidden");
+window.addEventListener("pagehide",privOn);window.addEventListener("pageshow",privOff);
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden){hiddenAt=Date.now();if(saveT)saveNow()}
-  else if(key&&hiddenAt&&Date.now()-hiddenAt>LOCK_MIN*60e3){lock()}
+  if(document.hidden){privOn();hiddenAt=Date.now();if(saveT)saveNow()}else privOff();
+  if(!document.hidden&&key&&hiddenAt&&Date.now()-hiddenAt>LOCK_MIN*60e3)lock();
 });
 window.addEventListener("pagehide",()=>{if(saveT)saveNow()});
 function resetIdle(){clearTimeout(idleT);if(key)idleT=setTimeout(lock,LOCK_MIN*60e3)}
@@ -695,7 +715,7 @@ function render(){
   const m0=$("main"),keepOpen=(P()&&m0.dataset.pid===cur)?[...m0.querySelectorAll("details")].map(d=>d.open):null;
   renderTabs();
   $("mLock").classList.toggle("hidden",!key);
-  $("mPass").textContent=key?"Change / remove passcode":"Set passcode";
+  $("mPass").textContent=key?"Change passcode":"Set passcode";
   $("presBtn").classList.toggle("hidden",listOn||!P());
   $("storeWarn").classList.toggle("hidden",canStore);
   $("presBtn").textContent=mode==="present"?"✎ Edit":"▶ Present";
@@ -770,6 +790,23 @@ function render(){
   p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
   if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
   $("main").querySelectorAll("textarea").forEach(grow);
+  $("main").querySelectorAll("textarea[data-k],input[type=text][data-k]").forEach(deidCheck);
+}
+function deidMsg(k,v){
+  v=String(v||"");if(!v.trim())return"";
+  if(k==="name"&&/\b[A-Z][a-z]{2,}[ ,]+[A-Z][a-z]{2,}/.test(v))return"Looks like a full name — initials are safer (e.g. AB 70F).";
+  if(/\b(MRN|DOB|SSN|FIN|CSN)\b/i.test(v))return"Avoid MRN, DOB, SSN and account numbers.";
+  if(/\b\d{3}-\d{2}-\d{4}\b/.test(v))return"That looks like a Social Security number.";
+  if(/\(?\b\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/.test(v))return"That looks like a phone number.";
+  if(/\b\d{7,}\b/.test(v))return"A long number like that looks like an MRN.";
+  if(/\b\d{1,2}\/\d{1,2}\/(19|20)\d{2}\b/.test(v))return"Full date with year — leave out birth dates.";
+  if(/[\w.+-]+@[\w-]+\.[\w.]+/.test(v))return"That looks like an email address.";
+  return"";
+}
+function deidCheck(t){
+  const k=t.dataset.k;if(!k||t.dataset.num||!(t.tagName==="TEXTAREA"||t.type==="text"))return;
+  const msg=deidMsg(k,t.value);let w=t.nextElementSibling;if(!(w&&w.classList.contains("deid")))w=null;
+  if(msg){if(!w){w=document.createElement("div");w.className="deid";t.after(w)}w.textContent="⚠ "+msg}else if(w)w.remove();
 }
 function grow(t){t.style.height="auto";t.style.height=(t.scrollHeight+2)+"px"}
 
@@ -787,6 +824,7 @@ $("main").addEventListener("input",e=>{
   if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="story")storyFresh(P(),t);
+  deidCheck(t);
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
 });
@@ -917,15 +955,15 @@ function rollover(p){
 async function passcodeFlow(){
   if(!hasCrypto()){alert("Encryption isn't available in this browser context. Open the page over https (or in Chrome/Firefox from a file) to use a passcode.");return}
   if(key){
-    const choice=prompt("Type a NEW passcode to change it, or leave blank and press OK to REMOVE the passcode (data will be stored unencrypted).");
-    if(choice===null)return;
+    const choice=prompt("Type a NEW passcode (at least "+PASS_MIN+" characters).");
+    if(choice===null||choice==="")return;
     if(choice===""){if(S.sync){alert("Turn off sync first (Sync devices → Turn off on this device). Sync requires a passcode.");return}if(confirm("Remove passcode? Saved data will no longer be encrypted.")){key=null;salt=null;await saveNow();render()}return}
-    if(choice.length<4){alert("Use at least 4 characters.");return}
+    if(choice.length<PASS_MIN){alert("Use at least "+PASS_MIN+" characters.");return}
     if(prompt("Confirm new passcode")!==choice){alert("Didn't match — passcode unchanged.");return}
     salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(choice,salt);await saveNow();render();alert("Passcode changed.");
   }else{
-    const a=prompt("New passcode (at least 4 characters). No recovery if forgotten.");if(a===null)return;
-    if(a.length<4){alert("Use at least 4 characters.");return}
+    const a=prompt("New passcode (at least "+PASS_MIN+" characters). No recovery if forgotten.");if(a===null)return;
+    if(a.length<PASS_MIN){alert("Use at least "+PASS_MIN+" characters.");return}
     if(prompt("Confirm passcode")!==a){alert("Didn't match.");return}
     salt=crypto.getRandomValues(new Uint8Array(16));key=await derive(a,salt);await saveNow();render();resetIdle();alert("Passcode set. Data is now encrypted on this device.");
   }
@@ -1078,7 +1116,7 @@ async function handlePendingPair(){
   if(S.sync)syncStop();
   if(await joinSync(c))openSync();
 }
-$("syncSheet").addEventListener("input",e=>{if(e.target.id==="joinCode"&&normCode(e.target.value).length===24&&!S.sync)joinSync(e.target.value)});
+$("syncSheet").addEventListener("input",e=>{if(e.target.id==="joinCode"&&normCode(e.target.value).length===24&&!S.sync){navigator.clipboard&&navigator.clipboard.writeText("").catch(()=>{});joinSync(e.target.value)}});
 let scanStream=null,scanRaf=0;
 async function startScan(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){alert("This browser can't open the camera here. Use paste or type the code.");return}
@@ -1132,11 +1170,12 @@ $("syncSheet").addEventListener("click",async e=>{
   else if(a==="start")startSync();
   else if(a==="join")joinSync($("joinCode").value);
   else if(a==="copy"){const c=fmtCode(S.sync.secret);
-    try{await navigator.clipboard.writeText(c);toast("Code copied — now tap Paste on the other device.")}
+    try{await navigator.clipboard.writeText(c);toast("Code copied — paste it on the other device within 60 s; it's then cleared from this clipboard.");
+      clearTimeout(window.__clipT);window.__clipT=setTimeout(()=>{navigator.clipboard.writeText("").catch(()=>{})},60e3)}
     catch(err){const d=$("syncBox").querySelector("details");if(d)d.open=true;alert("Couldn't copy automatically. Select the code shown and copy it.")}}
   else if(a==="paste"){
     let t="";try{t=await navigator.clipboard.readText()}catch(err){}
-    if(normCode(t).length===24){$("joinCode").value=t;joinSync(t)}
+    if(normCode(t).length===24){navigator.clipboard.writeText("").catch(()=>{});$("joinCode").value=t;joinSync(t)}
     else{$("joinCode").focus();toast("Couldn't read the clipboard — long-press the box and tap Paste, or use Scan.")}}
   else if(a==="scan")startScan();
   else if(a==="now")sync();
