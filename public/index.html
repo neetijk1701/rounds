@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- Network: only this site itself. No third parties. With sync off, the only requests are loading the app; with sync on, encrypted blobs go to /api. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-GK45n4EYK8nekW6cd7GV3yDMWNby1VpisIWimfG/F4A=' 'sha256-Qf2tPgizpdGBrsJp7SIrCd8AAma+wxEl4akYgkwJHh4=' 'sha256-o1SdqCH+5uA2PjFLawNP45PlQPN0xyfytbPfwqQ+Cec='; style-src 'unsafe-inline'; img-src data: 'self' blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-GK45n4EYK8nekW6cd7GV3yDMWNby1VpisIWimfG/F4A=' 'sha256-Qf2tPgizpdGBrsJp7SIrCd8AAma+wxEl4akYgkwJHh4=' 'sha256-Ps+1WowlbZzWTeNEL3/eNOC2unSoM7igLDLJuA03Fl4='; style-src 'unsafe-inline'; img-src data: 'self' blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3582,7 +3582,7 @@ const HELP={
  cam:"CAM-ICU screens for delirium: acute change or fluctuating course + inattention, plus either disorganized thinking or altered level of consciousness. Not assessable at RASS −4/−5.",
  pf:"P/F ratio = PaO₂ (arterial only) ÷ FiO₂ as a fraction, at the time of the gas. Never calculated from a venous PO₂.",
  dp:"Driving pressure = plateau pressure − total PEEP. Needs a real plateau (inspiratory hold) in a passive patient. Static compliance = tidal volume ÷ driving pressure.",
- pbw:"Predicted body weight: men 50 + 0.91 × (height cm − 152.4); women 45.5 + 0.91 × (height cm − 152.4). Lung-protective Vt is usually 6–8 mL/kg PBW.",
+ pbw:"Predicted body weight (ARDSNet): male equation 50 + 0.91 × (height cm − 152.4); female equation 45.5 + 0.91 × (height cm − 152.4). These are sex-based reference equations — pick the one your team uses; leave it unset and nothing is calculated. Lung-protective Vt is usually 6–8 mL/kg PBW.",
  satsbt:"SAT = spontaneous awakening trial (sedation paused). SBT = spontaneous breathing trial (low support, e.g. PS 5–8 / PEEP 5 or T-piece). Eligibility is the team's call.",
  uop:"Urine output in mL/kg/h = urine volume ÷ weight ÷ hours. Uses today's weight (or yesterday's, labeled) and the interval you enter (else the 24 h I/O box)."};
 const help=t=>`<button class="help" data-act="icuHelp" data-t="${t}" aria-label="What is this?">?</button>`;
@@ -3611,32 +3611,38 @@ function isec(p,sec,id,title,inner,{copy=true,open=true,cnt=""}={}){
     ${inner}</div></details>`;
 }
 
-/* ---------- calculations (informational; formulas always shown) ---------- */
+/* ---------- calculations (informational; formulas always shown; never fill or guess inputs) ---------- */
+function gnum(v,lo,hi,name){if(!filled(v))return null;const n=num(v);if(isNaN(n)||n<lo||n>hi)return {bad:`${name} "${v}" looks implausible (expected ${lo}–${hi}) — not used`};return {v:n}}
+const ok=x=>x&&x.v!==undefined;
 function mapCalc(p){
   const h=ic0(p).h||{},v=p.today.vit||{};
-  if(filled(h.map))return {v:num(h.map),src:"entered"};
-  const s=num(v.sbp),d=num(v.dbp);if(isNaN(s)||isNaN(d))return null;
-  return {v:Math.round((s+2*d)/3),src:`calc (SBP ${s} + 2×DBP ${d}) ÷ 3`};
+  if(filled(h.map)){const m=gnum(h.map,20,200,"MAP");return ok(m)?{v:m.v,src:"entered"}:{v:"—",src:m.bad,bad:1}}
+  const s=gnum(v.sbp,40,300,"SBP"),d=gnum(v.dbp,15,200,"DBP");if(!s&&!d)return null;
+  if(!ok(s)||!ok(d))return {v:"—",src:(s&&s.bad)||(d&&d.bad)||"needs both SBP and DBP",bad:1};
+  if(d.v>=s.v)return {v:"—",src:`DBP ${d.v} ≥ SBP ${s.v} — check BP`,bad:1};
+  return {v:Math.round((s.v+2*d.v)/3),src:`calculated from cuff BP (SBP ${s.v} + 2×DBP ${d.v}) ÷ 3 — not a measured MAP`,calc:1};
 }
 function pbw(p){
-  const ic=p.icu||{},h=num(ic.ht);if(isNaN(h)||!ic.sex)return null;
-  if(h<120||h>230)return {err:"height out of range (cm)"};
-  return {v:Math.round(((ic.sex==="M"?50:45.5)+0.91*(h-152.4))*10)/10};
+  const ic=p.icu||{},h=gnum(ic.ht,120,230,"height (cm)");if(!h||!ic.sex)return null;
+  if(!ok(h))return {err:h.bad};
+  return {v:Math.round(((ic.sex==="M"?50:45.5)+0.91*(h.v-152.4))*10)/10,eq:ic.sex==="M"?"male":"female"};
 }
 const isVent=r=>/Vent/.test((r||{}).sup||"");
 function respCalc(p){
   const r=ic0(p).r||{},out=[];if(!isVent(r))return out;
-  const w=pbw(p),vt=num(r.vvt),vte=num(r.mvt);
-  const vtU=!isNaN(vt)?{v:vt,l:"set Vt"}:!isNaN(vte)?{v:vte,l:"exhaled Vt"}:null;
-  if(w&&w.v)out.push({l:"PBW",v:w.v+" kg",f:`${p.icu.sex==="M"?"50":"45.5"} + 0.91 × (${p.icu.ht} − 152.4)`});
-  if(vtU)out.push(w&&w.v?{l:"Vt / PBW",v:(vtU.v/w.v).toFixed(1)+" mL/kg",f:`${vtU.l} ${vtU.v} mL ÷ ${w.v} kg`}:{l:"Vt / PBW",v:"—",f:w&&w.err?w.err:"needs height and sex (Patient info)"});
-  const pl=num(r.pplat),tp=num(r.tpeep),sp=num(r.vpeep);
-  const pe=!isNaN(tp)?{v:tp,l:"total PEEP (measured)"}:!isNaN(sp)?{v:sp,l:"set PEEP (total PEEP not measured)"}:null;
-  if(!isNaN(pl)&&pe){const dp=pl-pe.v;
+  const w=pbw(p),vt=gnum(r.vvt,100,1500,"set Vt"),vte=gnum(r.mvt,100,1500,"exhaled Vt");
+  [vt,vte].forEach(x=>{if(x&&x.bad)out.push({l:"Check",v:"",f:x.bad})});
+  const vtU=ok(vt)?{v:vt.v,l:"set Vt"}:ok(vte)?{v:vte.v,l:"exhaled Vt"}:null;
+  if(w&&w.v)out.push({l:"PBW",v:w.v+" kg",f:`${w.eq} reference equation: ${w.eq==="male"?"50":"45.5"} + 0.91 × (${p.icu.ht} − 152.4)`});
+  if(vtU)out.push(w&&w.v?{l:"Vt / PBW",v:(vtU.v/w.v).toFixed(1)+" mL/kg",f:`${vtU.l} ${vtU.v} mL ÷ ${w.v} kg`}:{l:"Vt / PBW",v:"—",f:w&&w.err?w.err:"needs height and a PBW reference equation (Patient info)"});
+  const pl=gnum(r.pplat,5,80,"Pplat"),tp=gnum(r.tpeep,0,40,"total PEEP"),sp=gnum(r.vpeep,0,40,"PEEP");
+  [pl,tp,sp].forEach(x=>{if(x&&x.bad)out.push({l:"Check",v:"",f:x.bad})});
+  const pe=ok(tp)?{v:tp.v,l:"total PEEP (measured)"}:ok(sp)?{v:sp.v,l:"set PEEP (total PEEP not measured)"}:null;
+  if(ok(pl)&&pe){const dp=pl.v-pe.v;
     if(dp<=0)out.push({l:"Driving P",v:"—",f:"plateau ≤ PEEP — check values"});
-    else{out.push({l:"Driving P",v:dp+" cmH₂O",f:`Pplat ${pl} − ${pe.l} ${pe.v}`});
+    else{out.push({l:"Driving P",v:dp+" cmH₂O",f:`Pplat ${pl.v} − ${pe.l} ${pe.v}`});
       if(vtU)out.push({l:"Static compliance",v:Math.round(vtU.v/dp)+" mL/cmH₂O",f:`${vtU.l} ${vtU.v} ÷ driving P ${dp}`})}}
-  else out.push({l:"Driving P",v:"—",f:"needs a plateau pressure and PEEP"});
+  else out.push({l:"Driving P",v:"—",f:"needs a plateau pressure (inspiratory hold) and PEEP"});
   return out;
 }
 function agCalc(p){
@@ -3647,29 +3653,42 @@ function agCalc(p){
   return {ag,cag,txt:t+". Assumes a normal AG ≈ 12 — your lab's may differ."};
 }
 function abgInterp(g){
-  const ph=num(g.ph),co2=num(g.co2),hc=num(g.hco3),ven=g.type==="VBG",out=[];if(isNaN(ph))return out;
+  const out=[],P=gnum(g.ph,6.5,8.0,"pH"),C=gnum(g.co2,5,200,g.type==="VBG"?"PvCO₂":"PaCO₂"),H=gnum(g.hco3,1,80,"HCO₃"),ven=g.type==="VBG";
+  [P,C,H].forEach(x=>{if(x&&x.bad)out.push(x.bad)});
+  if(!ok(P))return out;const ph=P.v;
   out.push(ph<7.35?"Acidemia":ph>7.45?"Alkalemia":"pH in range — a mixed disorder is still possible");
-  if(!isNaN(co2)&&!isNaN(hc)){
-    const pc=ven?"PvCO₂":"PaCO₂",vn=ven?" (venous CO₂ runs ~4–5 higher — approximate)":"";
-    if(ph<7.35&&hc<22){const e=1.5*hc+8;out.push(`Metabolic acidosis — Winter's expected PaCO₂ ${Math.round(e-2)}–${Math.round(e+2)} (1.5×HCO₃ + 8 ± 2); ${pc} ${co2}${vn} → ${co2>e+2?"also respiratory acidosis":co2<e-2?"also respiratory alkalosis":"appropriate compensation"}`)}
-    if(ph<7.35&&co2>45){const d=(co2-40)/10,ea=24+d,ec=24+3.5*d;out.push(`Respiratory acidosis — expected HCO₃ ≈ ${Math.round(ea)} if acute (+1/10), ≈ ${Math.round(ec)} if chronic (+3.5/10); measured ${hc}${hc<ea-2?" → lower than expected: also metabolic acidosis":hc>ec+2?" → higher than expected: also metabolic alkalosis":""}`)}
-    if(ph>7.45&&hc>26){const e=0.7*(hc-24)+40;out.push(`Metabolic alkalosis — expected PaCO₂ ≈ ${Math.round(e-2)}–${Math.round(e+2)} (40 + 0.7×ΔHCO₃); ${pc} ${co2}${vn}`)}
-    if(ph>7.45&&co2<35){const d=(40-co2)/10,ea=24-2*d,ec=24-5*d;out.push(`Respiratory alkalosis — expected HCO₃ ≈ ${Math.round(ea)} if acute (−2/10), ≈ ${Math.round(ec)}–${Math.round(24-4*d)} if chronic (−4–5/10); measured ${hc}${hc>ea+2?" → higher than expected: also metabolic alkalosis":hc<ec-2?" → lower than expected: also metabolic acidosis":""}`)}
+  if(ok(C)&&ok(H)){const co2=C.v,hc=H.v;
+    if(ven){
+      // Venous CO₂ isn't a substitute for PaCO₂: show the expected arterial values, but don't classify compensation.
+      if(ph<7.35&&hc<22){const e=1.5*hc+8;out.push(`Low HCO₃ with acidemia — metabolic acidosis likely. Winter's predicts PaCO₂ ${Math.round(e-2)}–${Math.round(e+2)}; this is a venous sample (PvCO₂ ${co2}), so compensation can't be judged — get an ABG if it matters`)}
+      else if(ph<7.35&&co2>45)out.push(`High PvCO₂ ${co2} with acidemia — possible respiratory acidosis, but venous CO₂ runs higher than arterial and depends on perfusion; confirm with an ABG`);
+      else if(ph>7.45&&hc>26)out.push(`High HCO₃ with alkalemia — metabolic alkalosis likely; compensation needs an arterial PaCO₂`);
+      else if(ph>7.45&&co2<35)out.push(`Low PvCO₂ ${co2} with alkalemia — possible respiratory alkalosis; confirm with an ABG`);
+      out.push("Venous sample: acid–base direction only; compensation and P/F need an arterial gas");
+    }else{
+      if(ph<7.35&&hc<22){const e=1.5*hc+8;out.push(`Metabolic acidosis — Winter's expected PaCO₂ ${Math.round(e-2)}–${Math.round(e+2)} (1.5×HCO₃ + 8 ± 2); PaCO₂ ${co2} → ${co2>e+2?"also respiratory acidosis":co2<e-2?"also respiratory alkalosis":"appropriate compensation"}`)}
+      if(ph<7.35&&co2>45){const d=(co2-40)/10,ea=24+d,ec=24+3.5*d;out.push(`Respiratory acidosis — expected HCO₃ ≈ ${Math.round(ea)} if acute (+1/10), ≈ ${Math.round(ec)} if chronic (+3.5/10); measured ${hc}${hc<ea-2?" → lower than expected: also metabolic acidosis":hc>ec+2?" → higher than expected: also metabolic alkalosis":""}`)}
+      if(ph>7.45&&hc>26){const e=0.7*(hc-24)+40;out.push(`Metabolic alkalosis — expected PaCO₂ ≈ ${Math.round(e-2)}–${Math.round(e+2)} (40 + 0.7×ΔHCO₃); PaCO₂ ${co2}`)}
+      if(ph>7.45&&co2<35){const d=(40-co2)/10,ea=24-2*d,ec=24-5*d;out.push(`Respiratory alkalosis — expected HCO₃ ≈ ${Math.round(ea)} if acute (−2/10), ≈ ${Math.round(ec)}–${Math.round(24-4*d)} if chronic (−4–5/10); measured ${hc}${hc>ea+2?" → higher than expected: also metabolic alkalosis":hc<ec-2?" → lower than expected: also metabolic acidosis":""}`)}
+    }
   }
-  const po=num(g.po2),fi=fio2f(g.fio2);
-  if(ven)out.push("P/F not calculated — venous sample");
-  else if(!isNaN(po)&&!isNaN(fi))out.push(`P/F ${Math.round(po/fi)} (PaO₂ ${po} ÷ FiO₂ ${fi.toFixed(2)})`);
-  else if(!isNaN(po))out.push("P/F needs the FiO₂ at the time of this gas");
+  if(!ven){const po=gnum(g.po2,10,700,"PaO₂"),fi=fio2f(g.fio2);
+    if(po&&po.bad)out.push(po.bad);
+    else if(ok(po)&&!isNaN(fi))out.push(`P/F ${Math.round(po.v/fi)} (PaO₂ ${po.v} ÷ FiO₂ ${fi.toFixed(2)})`);
+    else if(ok(po))out.push(filled(g.fio2)?"FiO₂ at draw looks implausible (0.21–1.0 or 21–100%) — P/F not calculated":"P/F needs the FiO₂ at the time of this gas");}
   return out;
 }
 function uopCalc(p){
-  const u=num((p.today.ios||{}).uop);if(isNaN(u))return null;
-  const hrs=num((ic0(p).rn||{}).uopHrs),H=!isNaN(hrs)&&hrs>0?hrs:24,hl=!isNaN(hrs)&&hrs>0?`${hrs} h (entered)`:"24 h (I/O box)";
-  let w=num((p.today.vit||{}).wt),wl="today's wt";if(isNaN(w)){w=num((p.prior.vit||{}).wt);wl="yesterday's wt"}
-  if(isNaN(w)||w<=0)return {txt:`UOP ${u} mL over ${hl} — mL/kg/h needs a weight`};
-  const v=(u/w/H).toFixed(2);return {v,txt:`UOP ${v} mL/kg/h (${u} mL ÷ ${w} kg [${wl}] ÷ ${hl})`};
+  const U=gnum((p.today.ios||{}).uop,0,20000,"urine");if(!U)return null;if(!ok(U))return {txt:U.bad};
+  const Hh=gnum((ic0(p).rn||{}).uopHrs,0.5,48,"UOP interval (h)");if(Hh&&!ok(Hh))return {txt:Hh.bad};
+  const H=ok(Hh)?Hh.v:24,hl=ok(Hh)?`${Hh.v} h (entered)`:"24 h — assumes the urine in the I/O box is a full 24 h total; enter the interval if not";
+  const pv=p.prior||{},pd=(pv.vitDates||{}).wt;
+  let W=gnum((p.today.vit||{}).wt,20,400,"weight"),wl="today's weight";
+  if(!ok(W)){const W2=gnum((pv.vit||{}).wt,20,400,"weight");if(ok(W2)){W=W2;wl=`weight from ${pd?mmdd(pd):"a prior day"} — verify`}}
+  if(!ok(W))return {txt:`UOP ${U.v} mL over ${hl} — mL/kg/h needs a weight${W&&W.bad?" ("+W.bad+")":""}`};
+  const v=(U.v/W.v/H).toFixed(2);return {v,txt:`UOP ${v} mL/kg/h (${U.v} mL ÷ ${W.v} kg [${wl}] ÷ ${hl})`};
 }
-function crRatio(p){const b=num((p.icu||{}).baseCr),c=num((p.today.lab||{}).cr);if(isNaN(b)||isNaN(c)||b<=0)return"";return `Cr ${c} vs baseline ${b} → ${(c/b).toFixed(1)}× (staging is your call)`}
+function crRatio(p){const b=gnum((p.icu||{}).baseCr,0.1,20,"baseline Cr"),c=gnum((p.today.lab||{}).cr,0.1,30,"Cr");if(!ok(b)||!ok(c))return (b&&b.bad)||(c&&c.bad)||"";return `Cr ${c.v} vs baseline ${b.v} → ${(c.v/b.v).toFixed(1)}× (staging is your call)`}
 const calcBox=items=>items.length?`<div class="calcs">${items.map(x=>`<div><b>${x.l}</b> ${esc(x.v)} <span>${esc(x.f)}</span></div>`).join("")}</div>`:"";
 function refreshCalcs(){
   const p=P();if(!isM(p))return;const set=(id,h)=>{const e=$(id);if(e)e.innerHTML=h};
@@ -3755,7 +3774,7 @@ function snapshot(p){
   return `<div class="snap" id="icuSnap">
     ${cell("Airway / O₂",esc(supTxt(r)),supTxt(pr.r))}
     ${cell("Oxygenation",[filled(v.spo2)&&"SpO₂ "+esc(v.spo2)+"%",filled(r.fio2)&&"FiO₂ "+esc(r.fio2),filled(r.vpeep)&&"PEEP "+esc(r.vpeep)].filter(Boolean).join(" · "),"")}
-    ${cell("Circulation",[m&&`MAP ${m.v}${filled(h.mapGoal)?" (goal "+esc(h.mapGoal)+")":""}`,press&&esc(press)].filter(Boolean).join(" · "),dripsLine(p,"h.press","prior"))}
+    ${cell("Circulation",[m&&!m.bad&&`MAP ${m.v}${m.calc?" (calc from cuff)":""}${filled(h.mapGoal)?" · goal "+esc(h.mapGoal):""}`,press&&esc(press)].filter(Boolean).join(" · "),dripsLine(p,"h.press","prior"))}
     ${cell("Neuro",[filled(n.rass)&&"RASS "+esc(n.rass)+(filled(n.rassT)?" (target "+esc(n.rassT)+")":""),filled(n.cam)&&"CAM "+esc(n.cam),sed&&esc(sed)].filter(Boolean).join(" · "),dripsLine(p,"n.sed","prior"))}
     ${cell("Renal",[u&&u.v&&`UOP ${u.v} mL/kg/h`,net&&net.net!==null&&`net ${net.net>0?"+":""}${net.net}`,filled(rn.rrt)&&rn.rrt!=="None"&&esc(rn.rrt)].filter(Boolean).join(" · "),"")}
     ${cell("Infection",[(p.abx||[]).filter(a=>a.name).map(abxTxt).map(esc).join(", "),pend&&`${pend} cx pending`,filled(v.tmax)&&"Tmax "+esc(v.tmax)].filter(Boolean).join(" · "),"")}
@@ -3771,7 +3790,7 @@ function micuInfo(p){
   <div class="grid two">${tin(p,"icu.dx","Primary ICU diagnosis","septic shock from pyelonephritis")}${tin(p,"icu.comorb","Key comorbidities","HFrEF 30%, CKD3, COPD")}
   ${tin(p,"icu.baseFx","Baseline function","independent ADLs")}${tin(p,"icu.baseO2","Baseline O₂","RA / 2 L home O₂")}
   ${tin(p,"icu.baseCr","Baseline Cr","1.1")}${tin(p,"icu.goc","Goals-of-care limits","no CPR, OK to intubate")}</div>
-  <div class="nbg">${nb(p,"icu.ht","Height","cm")}<div class="nb"><span>Sex (for PBW) ${help("pbw")}</span>${ichips(p,"icu.sex",["M","F"])}</div></div>`;
+  <div class="nbg">${nb(p,"icu.ht","Height","cm")}<div class="nb"><span>PBW reference equation ${help("pbw")}</span>${ichips(p,"icu.sex",["M","F"])}<em class="trw">${(p.icu||{}).sex?((p.icu.sex==="M"?"male: 50":"female: 45.5")+" + 0.91 × (ht − 152.4)"):"not set — Vt/PBW won't be calculated"}</em></div></div>`;
 }
 function micuStatus(p){
   const st=ic0(p).st||{};
@@ -3900,8 +3919,8 @@ function micuGoals(p){
   return isec(p,"g","icu-goals","Today's ICU goals",GOALS.map(([k,l])=>`<div class="goal">${k==="top"?ta("today.icu.g.top",l,"1. … 2. … 3. …"):tin(p,"today.icu.g."+k,l,"")}<button class="mini" data-act="icuToTodo" data-k="today.icu.g.${k}" title="Make a to-do">→ To-do</button></div>`).join(""),{copy:false});
 }
 function micuChecklist(p){
-  const c=ic0(p).chk||{},n=Object.keys(c).filter(k=>c[k]).length,tot=ICHK.reduce((s,g)=>s+g[1].length,0);
-  return `<details id="icu-chk" class="icusec"><summary>ICU daily safety & liberation checklist <span class="cnt">${n}/${tot}</span></summary><div class="body">
+  const c=ic0(p).chk||{},vals=Object.values(c),n=vals.filter(Boolean).length,tot=ICHK.reduce((s,g)=>s+g[1].length,0),no=vals.filter(v=>v==="N").length,def=vals.filter(v=>v==="D").length;
+  return `<details id="icu-chk" class="icusec"><summary>ICU daily safety & liberation checklist <span class="cnt">${n}/${tot} reviewed${no?` · ${no} No`:""}${def?` · ${def} deferred`:""}</span></summary><div class="body">
     <p class="legend">Yes / No / N/A / Deferred. Blank just means not reviewed yet — not that care was missed.</p>
     ${ICHK.map(([g,items])=>`<div class="fbh">${g}</div>${items.map(([k,l])=>`<div class="ck"><span>${esc(l)}</span><span class="seg4">${CHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span></div>`).join("")}`).join("")}
   </div></details>`;
@@ -3932,7 +3951,7 @@ function renderPresentMicu(p){
   const stale=d=>`<span class="stale">from ${esc(mmdd(d)||"yesterday")} — not updated</span>`;
   const hd=hday(icu.hAdm),idd=hday(icu.iAdm),m=mapCalc(p),u=uopCalc(p);
   const evs=(ic.ev||[]).filter(e=>filled(e.what)||filled(e.type)).map(e=>`<li>${esc(evTxt(e))}</li>`).join("");
-  const hemo=line([m&&`MAP ${m.v}${m.src!=="entered"?" (calc)":""}`,filled(h.mapGoal)&&"goal "+esc(h.mapGoal),filled(h.mapLow)&&"low O/N "+esc(h.mapLow),filled(h.hrR)&&"HR "+esc(h.hrR),filled(h.tR)&&"T "+esc(h.tR)])
+  const hemo=line([m&&!m.bad&&`MAP ${m.v}${m.calc?" (calc from cuff BP)":""}`,filled(h.mapGoal)&&"goal "+esc(h.mapGoal),filled(h.mapLow)&&"low O/N "+esc(h.mapLow),filled(h.hrR)&&"HR "+esc(h.hrR),filled(h.tR)&&"T "+esc(h.tR)])
     +(dripsLine(p,"h.press")?`<p><b>Pressors:</b> ${esc(dripsLine(p,"h.press"))}</p>`:"")
     +(line([h.cr&&"cap refill "+h.cr,h.ext&&"extremities "+h.ext.toLowerCase(),h.mot&&"mottling "+h.mot.toLowerCase(),filled((T.lab||{}).lac)&&`lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}`])?`<p>${line([h.cr&&"cap refill "+esc(h.cr),h.ext&&"extremities "+esc(h.ext.toLowerCase()),h.mot&&"mottling "+esc(h.mot.toLowerCase()),filled((T.lab||{}).lac)&&`lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}`])}</p>`:"")
     +(presBrief?"":txt(h.plan));
