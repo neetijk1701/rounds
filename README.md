@@ -11,6 +11,13 @@ A fillable morning-rounds sheet (built from Outline v3) that syncs between devic
 - "Copy yesterday's exam" (grayed until edited), move today → Prior per field, A&P carried forward grayed.
 - Works offline: a service worker (`public/sw.js`) caches only the app shell, never patient data or `/api`.
 
+## MICU mode (micu.js, merged into the page by build.js)
+Per-patient toggle (Patient info → Rounding mode). Adds an ICU snapshot, structured overnight events, hemodynamics + pressor table,
+respiratory/ventilator with PBW, Vt/PBW, driving pressure and compliance, ABG/VBG helper (P/F arterial only, Winter's, AG/delta),
+neuro/RASS/CAM + sedation drips, renal (UOP mL/kg/h, Cr vs baseline, RRT/CRRT), antimicrobials, devices with daily necessity review,
+ICU lab panel + tracked-lab trends, systems-based A/P, today's goals (→ to-dos), Yes/No/N/A/Deferred safety checklist, and a
+full/brief presenting view. New day moves ICU values to Prior; "Copy yesterday's" brings a section back grayed until checked.
+
 ## Privacy model
 - Notes live in each device's browser storage, encrypted with that device's passcode (AES-GCM, PBKDF2 key).
 - Sync: a random 120-bit pairing code is made on the first device and handed to others by QR code or typing.

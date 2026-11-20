@@ -101,6 +101,46 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+/* ---- MICU ---- */
+#practiceBar{background:#7a3db8;color:#fff;text-align:center;font-weight:800;font-size:13px;padding:5px;letter-spacing:.04em}
+.icuhead{font-size:14px;margin:8px 2px 4px;color:var(--mute)}
+.icuhead b{color:var(--ink)}
+.tj{font-weight:800}.tj-improving{color:var(--ok)}.tj-worsening{color:var(--bad)}.tj-stable{color:var(--acc2)}.tj-mixed{color:var(--warn)}
+.snap{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin:4px 0 10px;scroll-margin-top:100px}
+.snap .sc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:13.5px;min-height:46px}
+.snap .sc b{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--acc)}
+.yday{color:var(--mute);font-style:italic}
+.icusec{scroll-margin-top:100px}
+.icusec.oldsec .body{background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(127,127,127,.07) 6px 12px)}
+.icusec.oldsec input,.icusec.oldsec textarea,.icusec.oldsec .chip.on{opacity:.6;font-style:italic}
+.nbg{display:flex;flex-wrap:wrap;gap:8px 10px;margin:4px 0 8px;align-items:flex-start}
+.nb{display:flex;flex-direction:column;gap:3px;min-width:84px}
+.nb>span{font-size:11.5px;font-weight:700;color:var(--mute)}
+.nb>span i{font-weight:500;font-style:normal}
+.nb input[type=text],.nb input[type=date]{width:92px;padding:5px 7px!important;font-size:16px}
+.nb.wide{flex:1;min-width:180px}.nb.wide input{width:100%}
+.nb .trw{font-size:11px;color:var(--mute);font-style:normal;min-height:14px}
+.calcs{font-size:13.5px;background:rgba(47,111,179,.07);border-radius:8px;padding:6px 9px;margin:6px 0}
+.calcs:empty{display:none}
+.calcs div{margin:2px 0}.calcs span{color:var(--mute);font-size:12px}
+.drip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.drip select{font:inherit;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 6px}
+.drip input.dr{width:84px}.drip input.oth{width:120px}.drip input.prn{flex:1;min-width:150px}
+.adv{border:1px dashed var(--line);border-radius:8px;margin:8px 0}
+.adv>summary{font-size:12px;text-transform:none;letter-spacing:0;padding:6px 10px}
+.adv .nbg,.adv .chips{padding:0 10px 10px}
+.trk{border-collapse:collapse;font-size:14px;margin:6px 0}
+.trk td,.trk th{border-bottom:1px solid var(--line);padding:3px 10px 3px 0;text-align:left}
+.trk th{font-size:11px;color:var(--mute);text-transform:uppercase}
+.ck{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:14px;flex-wrap:wrap}
+.seg4{display:flex;gap:3px}.seg.on.mid{background:var(--warn);border-color:var(--warn);color:#fff}
+.goal{display:flex;gap:6px;align-items:flex-end;margin-bottom:6px}.goal>*:first-child{flex:1}
+.sysap .ph b{flex:1;font-size:14px;color:var(--acc)}
+.chip.sm{font-size:12px;padding:2px 8px}
+.help{border:1px solid var(--line);background:var(--card);color:var(--acc2);border-radius:50%;width:20px;height:20px;font-size:12px;font-weight:800;line-height:16px;padding:0;margin-left:4px}
+.tsb.cat{color:var(--warn);border-color:var(--warn)}
+.pc{font-size:14px;color:var(--mute)}
+.grid.three input{width:100%}
 #privScreen{position:fixed;inset:0;z-index:100;background:#1f3a5f;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;font-size:22px;font-weight:700;line-height:1.6}
 #privScreen.hidden{display:none!important}
 .deid{font-size:12px;font-weight:600;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:3px 8px;margin-top:4px}
@@ -243,6 +283,7 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
   <div class="tabs" id="tabs"></div>
 </header>
 
+<div id="practiceBar" class="hidden">🧪 PRACTICE MODE — fictional patients only</div>
 <div id="storeWarn" class="warnbar hidden" style="margin:8px 10px 0;max-width:880px">⚠️ This browser isn't letting the app save (private browsing?). Anything you enter will be lost when you close it.</div>
 <main id="main"></main>
 
@@ -272,6 +313,8 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
   <h3>Menu</h3>
   <button class="btn" data-act="syncSheet">🔄 Sync devices</button>
   <button class="btn" data-act="newDayAll">☀️ New day — all patients</button>
+  <button class="btn" data-act="icuDefMode" id="mDef">New patients start in: General medicine</button>
+  <button class="btn" data-act="icuPractice" id="mPractice">🧪 Practice mode (fictional patients only)</button>
   <button class="btn" data-act="print">🖨 Print this patient</button>
   <button class="btn" data-act="lockNow" id="mLock">🔒 Lock now</button>
   <button class="btn" data-act="passcode" id="mPass">Set passcode</button>
@@ -301,7 +344,8 @@ const PT_INFO=[["name","Name, Age"],["room","Room"],["on","O/N"],["hpi","HPI"],[
 const BMP=[["na","Na",135,145],["cl","Cl",98,107],["bun","BUN",7,20],["k","K",3.5,5.0],["co2","CO₂",22,29],["cr","Cr",0.6,1.3],["glu","Glu",70,180]];
 const CBC=[["wbc","WBC",4,11],["hgb","Hgb",12,17.5],["hct","Hct",36,50],["plt","Plt",150,400]];
 const XTRA=[["ca","Ca",8.5,10.5],["mg","Mg",1.7,2.4],["phos","Phos",2.5,4.5]];
-const ANALYTES=[...BMP,...CBC,...XTRA], AN=Object.fromEntries(ANALYTES.map(a=>[a[0],a]));
+const ICUL=[["lac","Lactate",0.5,2],["alt","ALT",7,56],["ast","AST",10,40],["tbili","T bili",0.2,1.2],["alb","Alb",3.5,5],["inr","INR",0.8,1.2],["ptt","PTT",25,35],["fib","Fib",200,400],["ica","iCa",1.12,1.32],["tg","TG",null,150],["ck","CK",null,200],["trop","Trop",null,null]];
+const ANALYTES=[...BMP,...CBC,...XTRA,...ICUL], AN=Object.fromEntries(ANALYTES.map(a=>[a[0],a]));
 const VIT=[["tmax","Tmax"],["hr","HR",60,100],["sbp","SBP",90,160],["dbp","DBP",50,100],["rr","RR",10,20],["spo2","SpO₂",92,100],["wt","Wt"]];
 const VITK=[...VIT.map(v=>v[0]),"o2dev","o2flow"];
 const O2DEV=["RA","NC","HFNC","NRB","BiPAP","Vent"];
@@ -322,6 +366,7 @@ const EXSYS=[
 const CX_SRC=["Blood","Urine","Sputum","Wound","Stool","CSF","Fluid","Other"], CX_ST=["Pending","NGTD","Positive","Final — neg"];
 const IMG_MOD=["CXR","CT","US","MRI","Echo","EKG","XR","Other"], IMG_ST=["Ordered","Pending read","Prelim","Final"];
 const CON_ST=["Requested","Seen","Following","Signed off"];
+const TCAT=["","Urgent","Before rounds","During rounds","After rounds","Before sign-out","F/u result"];
 const CODES=["Full","DNR","DNR/DNI","Comfort"];
 const BACKGROUND=[["pmh","PMH"],["psh","PSH"],["allergies","Drug Allergies"],["meds","Meds"],["social","Social Hx"],["family","Family Hx"]];
 const VALUES=[["vitals","Vital signs"],["exam","Exam"],["io","I/O"],["labs","Labs"],["cultures","Cultures"],["path","Pathology"],["imaging","Imaging"],["consults","Consults"]];
@@ -339,7 +384,7 @@ const uid=()=>Math.random().toString(36).slice(2,10);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const blankVals=()=>Object.fromEntries(VALUES.map(([k])=>[k,""]));
 function newPatient(){
-  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,todos:[],cx:[],img:[],cons:[],examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
+  const p={id:uid(),updated:Date.now(),ts:{},epoch:0,todos:[],cx:[],img:[],cons:[],mode:(S&&S.defMode)||"gen",apMode:(S&&S.defMode)==="micu"?"sys":"",examNotes:"",oneliner:"",abxDay:"",abxOf:"",abxStop:"",medsChk:{},examChk:{},apChk:{},
     today:Object.assign({date:today(),verify:[{t:"",done:false}]},blankVals()),
     prior:Object.assign({date:""},blankVals()),
     problems:[{p:"",a:"",pl:""},{p:"",a:"",pl:""},{p:"",a:"",pl:""}]};
@@ -350,7 +395,8 @@ function getPath(o,path){return path.split(".").reduce((a,k)=>a==null?a:a[k],o)}
 function setPath(o,path,v){const ks=path.split(".");const last=ks.pop();const t=ks.reduce((a,k)=>(a[k]==null&&(a[k]={}),a[k]),o);t[last]=v}
 const P=()=>S.patients.find(p=>p.id===cur);
 /* per-field edit times, so two devices editing the same patient merge cleanly */
-const unitOf=k=>{const m=k.match(/^(problems|todos|cx|img|cons)\./);if(m)return m[1];if(k.startsWith("today.verify."))return "today.verify";
+const unitOf=k=>{const m=k.match(/^(problems|todos|cx|img|cons|dev|abx)\./);if(m)return m[1];
+  const ml=k.match(/^((?:today|prior)\.icu\.(?:h\.press|n\.sed|abg|ev))\./);if(ml)return ml[1];if(k.startsWith("today.verify."))return "today.verify";
   const e=k.match(/^((?:today|prior)\.ex\.\w+)\./);return e?e[1]:k};
 function markTs(k,p=P()){if(!p)return;p.ts=p.ts||{};p.ts[unitOf(k)]=Date.now()}
 
@@ -538,7 +584,7 @@ const num=v=>{const m=String(v??"").match(/-?\d+(\.\d+)?/);return m?parseFloat(m
 const VITR=Object.fromEntries(VIT.map(v=>[v[0],v]));
 function flagOf(o,a,v){
   const n=num(v);if(isNaN(n))return"";
-  if(o==="lab"){const x=AN[a];return n<x[2]?"lo":n>x[3]?"hi":""}
+  if(o==="lab"){const x=AN[a];return x[2]!=null&&n<x[2]?"lo":x[3]!=null&&n>x[3]?"hi":""}
   if(o==="vit"){if(a==="tmax")return (n<50?n>=38:n>=100.4)?"hi":"";const x=VITR[a];if(!x||x[2]==null)return"";return n<x[2]?"lo":n>x[3]?"hi":""}
   return"";
 }
@@ -574,8 +620,8 @@ function vitBox(p,which){
   return `<div class="fishes"><div class="fb vit">${c("tmax","Tmax")}${c("hr","HR")}
     <div class="lc bp"><span class="ln">BP</span><span class="bpi"><input type="text" inputmode="decimal" data-k="${which}.vit.sbp" data-num="vit.sbp" value="${esc(v.sbp||"")}" class="${flagOf("vit","sbp",v.sbp)}">/<input type="text" inputmode="decimal" data-k="${which}.vit.dbp" data-num="vit.dbp" value="${esc(v.dbp||"")}"></span>${which==="today"?`<span class="trw" data-tr="vit.sbp">${trendOf(p,"vit","sbp")}</span>`:""}</div>
     ${c("rr","RR")}${c("spo2","SpO₂ %")}${c("wt","Wt kg")}</div>
-    <div class="fb o2"><span class="ln">O₂</span><div class="chips">${O2DEV.map(d=>`<button class="chip ${dev===d?"on":""}" data-act="pick" data-k="${which}.vit.o2dev" data-v="${d}">${d}</button>`).join("")}</div>
-    ${dev&&dev!=="RA"?`<input type="text" class="o2f" data-k="${which}.vit.o2flow" value="${esc(v.o2flow||"")}" placeholder="${dev==="NC"?"L/min":"settings / FiO₂"}">`:""}</div></div>`;
+    ${isM(p)&&which==="today"?`<div class="fb o2"><span class="ln">O₂</span><span class="meta">Set in Respiratory & ventilator</span></div>`:`<div class="fb o2"><span class="ln">O₂</span><div class="chips">${O2DEV.map(d=>`<button class="chip ${dev===d?"on":""}" data-act="pick" data-k="${which}.vit.o2dev" data-v="${d}">${d}</button>`).join("")}</div>
+    ${dev&&dev!=="RA"?`<input type="text" class="o2f" data-k="${which}.vit.o2flow" value="${esc(v.o2flow||"")}" placeholder="${dev==="NC"?"L/min":"settings / FiO₂"}">`:""}</div>`}</div>`;
 }
 function ioNet(io){
   if(!io||!anyIn(io,[...IO_IN,...IO_OUT]))return null;
@@ -704,15 +750,15 @@ function renderList(){
     const unv=((p.today||{}).verify||[]).filter(v=>v.t.trim()&&!v.done).length;
     return `<div class="card"><button class="ch" data-act="open" data-id="${p.id}"><b>${p.room?"Rm "+esc(p.room):"—"}</b><span class="nm">${esc(p.name)||"New patient"}</span><span class="pct">${progress(p)}% ›</span></button>
       ${filled(p.story)?`<div class="ol tldr ${p.storyOld?"oldtxt":""}">${esc(p.story)}</div>`:p.oneliner.trim()?`<div class="ol ${p.onelinerOld?"oldtxt":""}">${esc(p.oneliner)}</div>`:""}
-      <div>${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${p.storyOld&&filled(p.story)?`<span class="bdg">TL;DR needs update</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
-      ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}${t.st&&!t.done?` <span class="tsb">${esc(t.st)}</span>`:""}</span></label>`).join("")}
+      <div>${isM(p)?micuBadges(p):""}${p.code?`<span class="bdg cs">${esc(p.code)}</span>`:""}${p.storyOld&&filled(p.story)?`<span class="bdg">TL;DR needs update</span>`:""}${stale?`<span class="bdg">A&amp;P not updated</span>`:""}${unv?`<span class="bdg">${unv} lab${unv>1?"s":""} to verify</span>`:""}</div>
+      ${todos.map(([t,j])=>`<label class="chk ${t.done?"done":""}"><input type="checkbox" data-act="todoChk" data-pid="${p.id}" data-i="${j}" ${t.done?"checked":""}><span class="lbl">${esc(t.t)}${t.cat&&!t.done?` <span class="tsb cat">${esc(t.cat)}</span>`:""}${t.st&&!t.done?` <span class="tsb">${esc(t.st)}</span>`:""}</span></label>`).join("")}
     </div>`;
   }).join("");
   $("main").innerHTML=`<p class="sumline">${S.patients.length} patient${S.patients.length>1?"s":""} · ${openTotal} open to-do${openTotal===1?"":"s"}</p>${cards}`;
 }
 
 function render(){
-  const m0=$("main"),keepOpen=(P()&&m0.dataset.pid===cur)?[...m0.querySelectorAll("details")].map(d=>d.open):null;
+  const m0=$("main"),dkey=d=>d.id||((d.querySelector("summary")||{}).firstChild||{}).textContent||"",keepOpen=(P()&&m0.dataset.pid===cur)?new Map([...m0.querySelectorAll("details")].map(d=>[dkey(d),d.open])):null;
   renderTabs();
   $("mLock").classList.toggle("hidden",!key);
   $("mPass").textContent=key?"Change passcode":"Set passcode";
@@ -722,18 +768,24 @@ function render(){
   $("storeNote").textContent=!canStore?"⚠️ This browser isn't allowing storage — data will be lost when you close the page.":key?"Saved on this device, encrypted with your passcode. Auto-locks after "+LOCK_MIN+" min away.":"Saved on this device without encryption. Set a passcode to encrypt it.";
   if(listOn){$("main").dataset.pid="";renderList();return}
   const p=P();
-  if(p&&mode==="present"){$("main").dataset.pid="";$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");renderPresent(p);return}
+  $("practiceBar").classList.toggle("hidden",!(S&&S.practice));$("mPractice").textContent=(S&&S.practice?"✓ ":"")+"🧪 Practice mode (fictional patients only)";
+  $("mDef").textContent="New patients start in: "+(S&&S.defMode==="micu"?"MICU":"General medicine");
+  if(p&&mode==="present"){$("main").dataset.pid="";$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");if(isM(p))renderPresentMicu(p);else renderPresent(p);return}
   if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Notes are saved in this browser on this device. They only leave it if you turn on sync, and then only encrypted.<br>A personal study aid, not the medical record.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
-  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.cat" aria-label="When">${TCAT.map(o=>`<option value="${o}" ${(t.cat||"")===o?"selected":""}>${o||"When"}</option>`).join("")}</select><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
+  const M=isM(p);
   $("main").innerHTML=`
-  ${storyCard(p)}
+  ${storyCard(p)}${M?micuTop(p):""}
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}<div>${tx("code","Code status")}<div class="chips" style="margin-top:4px">${CODES.map(c=>`<button class="chip ${p.code===c?"on":""}" data-act="pick" data-k="code" data-v="${c}">${c}</button>`).join("")}</div></div></div>
-    <div class="grid" style="margin-top:8px">${ta("on","O/N","Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
+    <div class="nb" style="margin-top:8px"><span>Rounding mode</span><div class="chips">${[["gen","General medicine"],["micu","MICU"]].map(([v,l])=>`<button class="chip ${(p.mode||"gen")===v?"on":""}" data-act="icuMode" data-v="${v}">${l}</button>`).join("")}</div></div>
+    ${M?micuInfo(p):""}
+    <div class="grid" style="margin-top:8px">${ta("on","O/N",M?"Other overnight notes (structured events are in ICU status)":"Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
+  ${M?micuStatus(p):""}
 
   <details open id="secTodo"><summary>To-do <span class="cnt" id="cntTodo">${openTodos} open</span></summary><div class="body">
     ${todos}<button class="add" data-act="addTodo">＋ To-do</button>
@@ -749,8 +801,9 @@ function render(){
     ${subh("today","vitals","Vitals")}${vitBox(p,"today")}${ta("today.vitals","Vitals notes (ranges, events)")}
     ${subh("today","io","I/O (24 h)")}${ioBox(p,"today")}${ta("today.io","I/O notes")}
     <div id="secExam"></div>${subh("today","exam","Exam")}${exBox(p)}<div style="margin-top:6px">${ta("today.exam","Exam — other findings")}</div>
-    <div id="secLabs"></div>${subh("today","labs","Labs")}${fish(p,"today",false)}${ta("today.labs","Other labs")}
+    <div id="secLabs"></div>${subh("today","labs","Labs")}${fish(p,"today",false)}${M?micuLabs(p,"today")+trackTable(p,false):""}${ta("today.labs","Other labs")}
     ${subh("today","path","Pathology")}${ta("today.path","Pathology")}</div></details>
+  ${M?micuResp(p)+micuHemo(p)+micuNeuro(p)+micuRenal(p)+micuID(p)+micuCV(p)+micuGI(p)+micuDevices(p):""}
 
   <details open><summary>Cultures <span class="cnt">${(p.cx||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cx")}<div style="margin-top:6px">${fieldTA("today","cultures","Culture notes")}</div></div></details>
   <details open><summary>Imaging &amp; studies <span class="cnt">${(p.img||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"img")}<div style="margin-top:6px">${fieldTA("today","imaging","Imaging notes")}</div></div></details>
@@ -761,23 +814,25 @@ function render(){
     ${subh("prior","vitals","Vitals")}${vitBox(p,"prior")}${ta("prior.vitals","Vitals notes")}
     ${subh("prior","io","I/O (24 h)")}${ioBox(p,"prior")}${ta("prior.io","I/O notes")}
     ${subh("prior","exam","Exam")}${exLines(p.prior.ex).map(x=>`<div class="exl ${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")}${ta("prior.exam","Exam — other findings")}
-    ${subh("prior","labs","Labs")}${fish(p,"prior",false)}${ta("prior.labs","Other labs")}
+    ${subh("prior","labs","Labs")}${fish(p,"prior",false)}${M?micuLabs(p,"prior"):""}${ta("prior.labs","Other labs")}
     <div class="grid two" style="margin-top:8px">${["path","cultures","imaging","consults"].map(k=>fieldTA("prior",k,VALUES.find(v=>v[0]===k)[1])).join("")}</div></div></details>
 
-  <details open><summary>Meds &amp; orders check <span class="cnt" id="cntMeds">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
+  <details ${M?"":"open"}><summary>Meds &amp; orders check <span class="cnt" id="cntMeds">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
 
-  <details open><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
+  <details ${M?"":"open"}><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
     <p class="legend">Tap to cycle: blank → ✓ checked/unremarkable → ! abnormal → blank</p>
     <div class="cols">${examList()}</div>
     <div style="margin-top:8px">${ta("examNotes","Exam notes / abnormal findings")}</div></div></details>
 
-  <details open><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
+  <details ${M?"":"open"}><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
 
   <details open id="secAP"><summary>Assessment &amp; plan</summary><div class="body">
-    ${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
-    <button class="add" data-act="addProb">＋ Problem</button></div></details>
+    ${M?`<div class="chips" style="margin-bottom:8px">${[["sys","Systems-based"],["","Problem-based"]].map(([v,l])=>`<button class="chip ${(p.apMode||"")===v?"on":""}" data-act="icuAp" data-v="${v}">${l}</button>`).join("")}</div>`:""}
+    ${M&&p.apMode==="sys"?ta("oneliner","One-liner")+`<div style="height:10px"></div>`+micuSysAP(p):`${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
+    <button class="add" data-act="addProb">＋ Problem</button>`}</div></details>
+  ${M?micuGoals(p)+micuChecklist(p):""}
 
-  <nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>
+  ${M?`<nav class="jump noprint"><button data-act="jump" data-to="icuSnap">Snap</button><button data-act="jump" data-to="icu-status">Status</button><button data-act="jump" data-to="icu-r">Resp</button><button data-act="jump" data-to="icu-h">Hemo</button><button data-act="jump" data-to="secAP">Plan</button><button data-act="jump" data-to="icu-goals">Goals</button><button data-act="present">▶</button></nav>`:`<nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>`}
   <div class="toolbar noprint">
     <button class="btn" data-act="newDay">☀️ New day for this patient</button>
     <button class="btn danger" data-act="delPt">Remove patient</button>
@@ -788,7 +843,8 @@ function render(){
   if(p.examOld){const n=$("main").querySelector('[data-k="today.exam"]');if(n)n.classList.add("old")}
   if(p.examNotesOld)$("main").querySelector('[data-k="examNotes"]').classList.add("old");
   p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
-  if(keepOpen)$("main").querySelectorAll("details").forEach((d,i)=>{if(i<keepOpen.length)d.open=keepOpen[i]});
+  if(keepOpen)$("main").querySelectorAll("details").forEach(d=>{const k=dkey(d);if(keepOpen.has(k))d.open=keepOpen.get(k)});
+  if(isM(p)){SYS.forEach(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).forEach(fl=>{const n=$("main").querySelector(`[data-k="sys.${k}.${fl}"]`);if(n)n.classList.add("old")}))}
   $("main").querySelectorAll("textarea").forEach(grow);
   $("main").querySelectorAll("textarea[data-k],input[type=text][data-k]").forEach(deidCheck);
 }
@@ -824,12 +880,14 @@ $("main").addEventListener("input",e=>{
   if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="story")storyFresh(P(),t);
+  icuInputHook(t,k);
   deidCheck(t);
   if(k==="name"||k==="room"){renderTabs();$("title").textContent=(P().room?("Rm "+P().room+" · "):"")+(P().name||"New patient")}
   save();
 });
-$("main").addEventListener("change",e=>{if(e.target.tagName==="SELECT"&&e.target.dataset.k){const t=e.target;setPath(P(),t.dataset.k,t.value);markTs(t.dataset.k);
+$("main").addEventListener("change",e=>{if(e.target.tagName==="SELECT"&&e.target.dataset.k){const t=e.target;setPath(P(),t.dataset.k,t.value);markTs(t.dataset.k);icuChangeHook(t,t.dataset.k);
     const rw=t.closest(".rw");if(rw&&/^cx\.\d+\.st$/.test(t.dataset.k))rw.classList.toggle("pos",t.value==="Positive");save();return}
+  if(e.target.type==="date"&&e.target.dataset.k&&isM(P())){const y=scrollY;render();scrollTo(0,y);return}
   if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
 function updateCounts(){
   const p=P(),set=(id,v)=>{const e=$(id);if(e)e.textContent=v};
@@ -840,6 +898,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,p=S&&cur?P():null,i=+b.dataset.i;
   const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
+  if(a.startsWith("icu")){icuAct(a,b,p,i);return}
   switch(a){
     case"tab":cur=b.dataset.id;listOn=false;render();scrollTo(0,0);flashId();break;
     case"open":cur=b.dataset.id;listOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
@@ -875,7 +934,7 @@ document.addEventListener("click",e=>{
     case"undo":undoMove();break;
     case"storyOk":storyFresh(p);save();break;
     case"jump":{const el=$(b.dataset.to);if(!el)break;const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({behavior:"smooth",block:"start"});break}
-    case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);rerender();break}
+    case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);if(isM(p))icuFresh(p,k);rerender();break}
     case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(true);rerender();break}
     case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(true);
       b.classList.toggle("on",j<0);save();break}
@@ -939,6 +998,7 @@ function storyFresh(p,el){
   const s=$("storyStamp");if(s)s.textContent=storyStamp(p);
 }
 function rollover(p){
+  micuRollover(p);
   if(filled(p.story))p.storyOld=true;
   // A&P carries forward, grayed out until you touch it
   if((p.oneliner||"").trim())p.onelinerOld=true;
@@ -948,7 +1008,7 @@ function rollover(p){
   p.todos=(p.todos||[]).filter(x=>x.t.trim()&&!x.done);
   p.examOld=false;p.examNotesOld=false;
   const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
-  p.today=Object.assign({date:today(),lab:{},vit:{},ios:{},ex:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
+  p.today=Object.assign({date:today(),lab:{},vit:{},ios:{},ex:{},icu:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});
   p.medsChk={};p.examChk={};p.apChk={};p.examNotes="";p.updated=Date.now();p.epoch=Date.now();p.ts={};
 }
@@ -1188,6 +1248,7 @@ $("syncSheet").addEventListener("click",async e=>{
 });
 
 if("serviceWorker" in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{})})}
+/*MICU*/
 boot();
 </script>
 </body>
