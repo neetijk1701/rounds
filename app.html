@@ -101,6 +101,10 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+/* sample text inside empty boxes: lighter so it never reads as an entry */
+:root{--ph:#b4bcc8}
+@media (prefers-color-scheme:dark){:root{--ph:#566273}}
+input::placeholder,textarea::placeholder{color:var(--ph);opacity:1;font-style:italic}
 /* ---- MICU ---- */
 #practiceBar{background:#7a3db8;color:#fff;text-align:center;font-weight:800;font-size:13px;padding:5px;letter-spacing:.04em}
 .icuhead{font-size:14px;margin:8px 2px 4px;color:var(--mute)}
