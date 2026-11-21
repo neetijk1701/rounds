@@ -4,7 +4,7 @@ const {minify}=require("terser");
   const esc=s=>s.replace(/<\/script/gi,"<\\/script");
   const qr=esc(fs.readFileSync(require.resolve("qrcode-generator/qrcode.js"),"utf8"));
   const scan=esc((await minify(fs.readFileSync(require.resolve("jsqr/dist/jsQR.js"),"utf8"))).code);
-  let out=fs.readFileSync("app.html","utf8").replace("/*QRLIB*/",()=>qr).replace("/*QRSCAN*/",()=>scan).replace("/*MICU*/",()=>fs.readFileSync("micu.js","utf8"));
+  let out=fs.readFileSync("app.html","utf8").replace("/*QRLIB*/",()=>qr).replace("/*QRSCAN*/",()=>scan).replace("/*MICU*/",()=>fs.readFileSync("micu.js","utf8")+"\n"+fs.readFileSync("pres.js","utf8"));
   // Replace 'unsafe-inline' for scripts with hashes of the exact inline scripts, so injected script can't run.
   const hashes=[...out.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>`'sha256-${crypto.createHash("sha256").update(m[1],"utf8").digest("base64")}'`);
   const src="script-src "+hashes.join(" ");

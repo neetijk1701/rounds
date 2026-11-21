@@ -101,6 +101,18 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+.miss{color:var(--warn);font-weight:600}
+.precheck{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:6px 10px;margin:8px 0;font-size:14px}
+.precheck summary{font-weight:800;padding:2px 0;text-transform:none;letter-spacing:0;color:var(--warn);font-size:14px}
+.precheck ul{margin:4px 0 4px 18px;padding:0}.precheck.ok{background:rgba(30,142,90,.1);color:var(--ok);font-weight:700}
+.pfmt{display:flex;flex-direction:column;gap:6px;margin:6px 0}.pfmt .sep{width:12px}
+.apg{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mute);margin:10px 0 4px}
+.apg.big{color:var(--acc);font-size:13px}
+.pcbox{max-height:88vh;overflow:auto}
+.pcrow{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--line);font-size:14px}.pcrow span{flex:1}
+.pcrow input[type=checkbox]{width:18px;height:18px}
+.dec{background:rgba(47,111,179,.08);border-radius:8px;padding:6px 9px;margin:6px 0;font-size:14.5px}
+.qadd{margin-top:6px}
 /* sample text inside empty boxes: lighter so it never reads as an entry */
 :root{--ph:#b4bcc8}
 @media (prefers-color-scheme:dark){:root{--ph:#566273}}
@@ -510,7 +522,7 @@ function progress(p){
 function tabLabel(p,i){const r=(p.room||"").trim(),nm=(p.name||"").trim().split(/[ ,]/)[0]||"";const s=r&&nm?r+" · "+nm:(r||nm||("Pt "+(i+1)));return s.slice(0,20)}
 function flashId(){const t=$("title");t.classList.remove("flash");void t.offsetWidth;t.classList.add("flash")}
 function renderTabs(){
-  $("tabs").innerHTML=(S.patients.length?`<button class="tab all ${listOn?"on":""}" data-act="list">▤ All</button>`:"")+S.patients.map((p,i)=>`<button class="tab ${p.id===cur&&!listOn?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
+  $("tabs").innerHTML=(S.patients.length?`<button class="tab all ${listOn?"on":""}" data-act="list">▤ All</button><button class="tab all ${afterOn?"on":""}" data-act="icuAfter">✓ After rounds</button>`:"")+S.patients.map((p,i)=>`<button class="tab ${p.id===cur&&!listOn&&!afterOn?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
 }
 const ta=(path,label,ph="")=>`<label class="f"><span>${label}</span><textarea rows="1" data-k="${path}" placeholder="${esc(ph)}">${esc(getPath(P(),path))}</textarea></label>`;
 const tx=(path,label)=>`<label class="f"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(P(),path))}"></label>`;
@@ -770,6 +782,7 @@ function render(){
   $("storeWarn").classList.toggle("hidden",canStore);
   $("presBtn").textContent=mode==="present"?"✎ Edit":"▶ Present";
   $("storeNote").textContent=!canStore?"⚠️ This browser isn't allowing storage — data will be lost when you close the page.":key?"Saved on this device, encrypted with your passcode. Auto-locks after "+LOCK_MIN+" min away.":"Saved on this device without encryption. Set a passcode to encrypt it.";
+  if(afterOn){$("main").dataset.pid="";renderAfter();return}
   if(listOn){$("main").dataset.pid="";renderList();return}
   const p=P();
   $("practiceBar").classList.toggle("hidden",!(S&&S.practice));$("mPractice").textContent=(S&&S.practice?"✓ ":"")+"🧪 Practice mode (fictional patients only)";
@@ -780,7 +793,7 @@ function render(){
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.cat" aria-label="When">${TCAT.map(o=>`<option value="${o}" ${(t.cat||"")===o?"selected":""}>${o||"When"}</option>`).join("")}</select><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
-  const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
+  const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${isM(p)?`<button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button>`:""}${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   const M=isM(p);
   $("main").innerHTML=`
   ${storyCard(p)}${M?micuTop(p):""}
@@ -833,7 +846,8 @@ function render(){
   <details open id="secAP"><summary>Assessment &amp; plan</summary><div class="body">
     ${M?`<div class="chips" style="margin-bottom:8px">${[["sys","Systems-based"],["","Problem-based"]].map(([v,l])=>`<button class="chip ${(p.apMode||"")===v?"on":""}" data-act="icuAp" data-v="${v}">${l}</button>`).join("")}</div>`:""}
     ${M&&p.apMode==="sys"?ta("oneliner","One-liner")+`<div style="height:10px"></div>`+micuSysAP(p):`${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
-    <button class="add" data-act="addProb">＋ Problem</button>`}</div></details>
+    <button class="add" data-act="addProb">＋ Problem</button>`}
+    <div style="margin-top:10px">${ta("today.dec","Decided on rounds (new orders, med changes, studies, consults, procedures)","fill in during / right after rounds — shows on the After rounds tab")}</div></div></details>
   ${M?micuGoals(p)+micuChecklist(p):""}
 
   ${M?`<nav class="jump noprint"><button data-act="jump" data-to="icuSnap">Snap</button><button data-act="jump" data-to="icu-status">Status</button><button data-act="jump" data-to="icu-r">Resp</button><button data-act="jump" data-to="icu-h">Hemo</button><button data-act="jump" data-to="secAP">Plan</button><button data-act="jump" data-to="icu-goals">Goals</button><button data-act="present">▶</button></nav>`:`<nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>`}
@@ -904,12 +918,12 @@ document.addEventListener("click",e=>{
   const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
   if(a.startsWith("icu")){icuAct(a,b,p,i);return}
   switch(a){
-    case"tab":cur=b.dataset.id;listOn=false;render();scrollTo(0,0);flashId();break;
-    case"open":cur=b.dataset.id;listOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
-    case"list":listOn=true;render();scrollTo(0,0);break;
+    case"tab":cur=b.dataset.id;listOn=false;afterOn=false;render();scrollTo(0,0);flashId();break;
+    case"open":cur=b.dataset.id;listOn=false;afterOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
+    case"list":listOn=true;afterOn=false;render();scrollTo(0,0);break;
     case"present":mode=mode==="present"?"edit":"present";render();scrollTo(0,0);break;
     case"todoChk":{const pt=S.patients.find(x=>x.id===b.dataset.pid);if(!pt)break;const td=pt.todos[i];td.done=b.checked;markTs("todos",pt);pt.updated=Date.now();
-      b.closest(".chk").classList.toggle("done",b.checked);if(S.sync)S.sync.dirty=true;clearTimeout(saveT);saveT=setTimeout(saveNow,400);schedulePush();renderTabs();break}
+      b.closest(".chk").classList.toggle("done",b.checked);if(S.sync)S.sync.dirty=true;clearTimeout(saveT);saveT=setTimeout(saveNow,400);schedulePush();renderTabs();if(afterOn){const y=scrollY;render();scrollTo(0,y)}break}
     case"addTodo":p.todos=p.todos||[];p.todos.push({t:"",done:false});markTs("todos");rerender();{const n=$("main").querySelectorAll('.todo input[type=text]');n.length&&n[n.length-1].focus({preventScroll:true})}break;
     case"delTodo":p.todos.splice(i,1);markTs("todos");rerender();break;
     case"copyExam":{
@@ -1008,6 +1022,7 @@ function rollover(p){
   if((p.oneliner||"").trim())p.onelinerOld=true;
   p.problems.forEach(pr=>{pr.old={};["p","a","pl"].forEach(fl=>{if((pr[fl]||"").trim())pr.old[fl]=1})});
   p.apFrom=p.today.date||today();
+  if(filled(p.today.dec)){p.prior.dec=p.today.dec;p.prior.decDate=p.today.date||today()}
   p.priorExam={notes:p.examNotes||"",date:p.today.date||today()};
   p.todos=(p.todos||[]).filter(x=>x.t.trim()&&!x.done);
   p.examOld=false;p.examNotesOld=false;
@@ -1066,7 +1081,7 @@ function setSync(st){
 }
 async function encBlob(str){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},syncKey,te.encode(str));return b64(iv)+"."+b64(ct)}
 async function decBlob(blob){const [iv,ct]=blob.split(".");return td.decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(iv)},syncKey,unb64(ct)))}
-const payload=()=>JSON.stringify({patients:S.patients,deleted:S.deleted||{}});
+const payload=()=>JSON.stringify({patients:S.patients,deleted:S.deleted||{},prefs:S.prefs||null});
 
 /* per-patient merge: newest edit wins; deletions are remembered for 30 days */
 function merge(local,remote){
@@ -1081,7 +1096,8 @@ function merge(local,remote){
     if(deleted[id]&&deleted[id]>=(pick.updated||0))continue;
     patients.push(pick);
   }
-  return {patients,deleted};
+  const lp=local.prefs||null,rp=remote.prefs||null,prefs=!lp?rp:!rp?lp:((lp.ts||0)>(rp.ts||0)?lp:rp);
+  return {patients,deleted,prefs};
 }
 const clone=o=>o===undefined?undefined:JSON.parse(JSON.stringify(o));
 function mergePatient(l,r){
@@ -1113,11 +1129,11 @@ async function sync(){
       if(!d.same){
         if(d.blob){
           const remote=JSON.parse(await decBlob(d.blob));
-          const before=payload(), merged=merge({patients:S.patients,deleted:S.deleted},remote);
-          S.patients=merged.patients;S.deleted=merged.deleted;
+          const before=payload(), merged=merge({patients:S.patients,deleted:S.deleted,prefs:S.prefs||null},remote);
+          S.patients=merged.patients;S.deleted=merged.deleted;S.prefs=merged.prefs;
           if(!S.patients.some(p=>p.id===cur))cur=S.patients[0]?.id||null;
           if(payload()!==before)softRender();
-          needPush=JSON.stringify(merged)!==JSON.stringify({patients:remote.patients,deleted:remote.deleted||{}});
+          needPush=JSON.stringify(merged)!==JSON.stringify({patients:remote.patients,deleted:remote.deleted||{},prefs:remote.prefs||null});
         }else needPush=S.patients.length>0||needPush;
         S.sync.rev=d.rev;
       }

@@ -17,7 +17,8 @@ const DRIP_UNITS=["mcg/kg/min","mcg/min","mcg/kg/hr","mcg/hr","mg/hr","mg/kg/hr"
 const RSUP=["RA","NC","Face mask","NRB","HFNC","CPAP","BiPAP","Vent (ETT)","Trach vent","Trach collar"];
 const VMODES=["AC/VC","AC/PC","PRVC","PSV","SIMV","APRV","Other"];
 const RASS=["+4","+3","+2","+1","0","-1","-2","-3","-4","-5","UTA"];
-const DEV=["ETT","Trach","CVC","Art line","PIV","PICC","Foley","NG/OG","Feeding tube","Chest tube","Surgical drain","HD catheter","Other"];
+const DEV=["ETT","Trach","CVC","PICC","Art line","HD catheter","PIV","Foley","Suprapubic catheter","NG tube","OG tube","Feeding tube (post-pyloric)","PEG / G-tube","Chest tube","Surgical drain","Temporary pacing wire","MCS (IABP / Impella / ECMO)","Other","NG/OG","Feeding tube"];
+const DEV_DET={"ETT":"size, depth (7.5 @ 23 cm at lip)","Trach":"size / type, cuff","CVC":"lumens (triple-lumen)","PICC":"lumens","Art line":"waveform OK?","HD catheter":"last used","PIV":"gauge","Foley":"output, hematuria","Chest tube":"suction vs water seal, output, air leak","Surgical drain":"output / character","Temporary pacing wire":"rate, output, capture","MCS (IABP / Impella / ECMO)":"device, settings","NG tube":"to suction / feeds","OG tube":"to suction / feeds","PEG / G-tube":"feeds / venting"};
 const SYS=[["neuro","Neuro / pain / sedation"],["pulm","Pulmonary / airway / ventilation"],["cv","Cardiovascular / hemodynamics"],["renal","Renal / fluids / lytes / acid–base"],["id","Infectious disease"],["gi","GI / nutrition"],["heme","Hematology"],["endo","Endocrine"],["lines","Lines / tubes / prophylaxis"],["dispo","Disposition / goals of care"]];
 const ICHK=[["Neuro",[["pain","Pain assessed"],["sedT","Sedation target reviewed"],["delir","Delirium assessed"],["sat","SAT considered"]]],
  ["Respiratory",[["vent","Vent settings reviewed"],["sbt","SBT considered"],["extub","Extubation readiness considered"],["o2wean","O₂ weaning considered"]]],
@@ -88,6 +89,7 @@ function respCalc(p){
   const vtU=ok(vt)?{v:vt.v,l:"set Vt"}:ok(vte)?{v:vte.v,l:"exhaled Vt"}:null;
   if(w&&w.v)out.push({l:"PBW",v:w.v+" kg",f:`${w.eq} reference equation: ${w.eq==="male"?"50":"45.5"} + 0.91 × (${p.icu.ht} − 152.4)`});
   if(vtU)out.push(w&&w.v?{l:"Vt / PBW",v:(vtU.v/w.v).toFixed(1)+" mL/kg",f:`${vtU.l} ${vtU.v} mL ÷ ${w.v} kg`}:{l:"Vt / PBW",v:"—",f:w&&w.err?w.err:"needs height and a PBW reference equation (Patient info)"});
+  if(!["AC/VC","PRVC","AC/PC","SIMV"].includes(r.vmode||"")){out.push({l:"Driving P",v:"—",f:r.vmode?`not calculated in ${r.vmode} — a plateau isn't reliable with spontaneous breathing`:"set the vent mode first"});return out}
   const pl=gnum(r.pplat,5,80,"Pplat"),tp=gnum(r.tpeep,0,40,"total PEEP"),sp=gnum(r.vpeep,0,40,"PEEP");
   [pl,tp,sp].forEach(x=>{if(x&&x.bad)out.push({l:"Check",v:"",f:x.bad})});
   const pe=ok(tp)?{v:tp.v,l:"total PEEP (measured)"}:ok(sp)?{v:sp.v,l:"set PEEP (total PEEP not measured)"}:null;
@@ -166,7 +168,8 @@ function drips(p,kind){
       <span class="trw">${tr}</span><button class="x" data-act="icuDelRow" data-path="${path}" data-i="${i}" aria-label="Remove">×</button></div>`}).join("");
   const notToday=prior.filter(x=>x.drug&&!list.some(r=>dripName(r)===dripName(x)))
     .map(x=>`<div class="meta">${esc(mmdd(p.prior.icuDate)||"Yesterday")}: ${esc(dripName(x))} ${esc(x.cur||"?")} ${esc(x.unit||"")} — not entered today</div>`).join("");
-  return rows+notToday+`<button class="add" data-act="icuAddRow" data-path="${path}" data-tpl="drip">＋ ${kind==="h.press"?"Pressor / inotrope":"Sedative / analgesic infusion"}</button>`;
+  const noneK=kind==="h.press"?"today.icu.h.pressNone":"today.icu.n.sedNone",none=getPath(p,noneK);
+  return rows+notToday+`<div class="rwh"><button class="add" style="flex:1;margin:0" data-act="icuAddRow" data-path="${path}" data-tpl="drip">＋ ${kind==="h.press"?"Pressor / inotrope":"Sedative / analgesic infusion"}</button>${list.some(r=>r.drug)?"":`<button class="chip ${none?"on":""}" data-act="icuNone" data-k="${noneK}">None today</button>`}</div>`;
 }
 const dripTxt=(r,pr)=>`${dripName(r)} ${r.cur||"?"}${r.unit?" "+r.unit:""}${r.max?` (max ${r.max})`:""}${pr&&filled(pr.cur)&&filled(r.cur)?` ${trendSimple(r.cur,pr.cur).split(" ")[0]} from ${pr.cur}`:""}`;
 function dripsLine(p,kind,which="today"){
@@ -192,8 +195,8 @@ const abgTxt=g=>`${g.type||"Gas"}${g.time?" "+g.time:""}: ${[g.ph,g.co2,g.type==
 function devices(p){
   const l=p.dev||[];
   return l.map((d,i)=>{const pre=`dev.${i}.`,days=hday(d.date),rev=d.needD===today();
-    return `<div class="rw ${d.need==="No"&&rev?"pos":""}"><div class="rwh">${sel(pre+"type",DEV,d.type,"Device")}<input type="text" class="site" data-k="${pre}site" value="${esc(d.site||"")}" placeholder="site (R IJ…)"><input type="date" data-k="${pre}date" value="${esc(d.date||"")}"><span class="dd">${days?"day "+days:""}</span><button class="x" data-act="icuDelRow" data-path="dev" data-i="${i}" aria-label="Remove">×</button></div>
-      <div class="rwh"><input type="text" class="site" data-k="${pre}ind" value="${esc(d.ind||"")}" placeholder="indication"><input type="text" class="site" data-k="${pre}issue" value="${esc(d.issue||"")}" placeholder="issues / findings"></div>
+    return `<div class="rw ${d.need==="No"&&rev?"pos":""}"><div class="rwh">${sel(pre+"type",DEV,d.type,"Device",1)}<input type="text" class="site" data-k="${pre}site" value="${esc(d.site||"")}" placeholder="site (R IJ…)"><input type="date" data-k="${pre}date" value="${esc(d.date||"")}"><span class="dd">${days?"day "+days:""}</span><button class="x" data-act="icuDelRow" data-path="dev" data-i="${i}" aria-label="Remove">×</button></div>
+      <div class="rwh">${d.type==="PIV"?`<input type="text" inputmode="numeric" class="site" style="max-width:90px" data-k="${pre}count" value="${esc(d.count||"")}" placeholder="how many">`:""}<input type="text" class="site" data-k="${pre}det" value="${esc(d.det||"")}" placeholder="${esc(DEV_DET[d.type]||"details")}"><input type="text" class="site" data-k="${pre}ind" value="${esc(d.ind||"")}" placeholder="indication"><input type="text" class="site" data-k="${pre}issue" value="${esc(d.issue||"")}" placeholder="issues / findings"></div>
       <div class="rwh"><span class="dd">Still needed today?</span>${["Yes","No"].map(v=>`<button class="chip ${rev&&d.need===v?"on":""}" data-act="icuNeed" data-i="${i}" data-v="${v}">${v}</button>`).join("")}${!rev?`<span class="bdg">not reviewed today</span>`:""}<input type="text" class="site" data-k="${pre}plan" value="${esc(d.plan||"")}" placeholder="removal / replacement plan"></div></div>`}).join("")
    +`<button class="add" data-act="icuAddRow" data-path="dev" data-tpl="dev">＋ Line / tube / drain</button>`;
 }
@@ -279,11 +282,13 @@ function micuResp(p){
   if(isVent(r)){
     const m=r.vmode||"",vc=["AC/VC","PRVC","SIMV"].includes(m),pc=m==="AC/PC",ps=m==="PSV"||m==="SIMV",ap=m==="APRV";
     h+=`${lbl("Mode")}${ichips(p,B+"vmode",VMODES)}
-    ${lbl("Settings")}<div class="nbg">${!ps||m==="SIMV"?(ap?"":nb(p,B+"vrr","Set RR")):""}${vc?nb(p,B+"vvt","Set Vt","mL"):""}${pc?nb(p,B+"vpi","Insp P","cmH₂O"):""}${ps?nb(p,B+"vps","PS","cmH₂O"):""}
+    ${lbl("Settings")}<div class="nbg">${!ps||m==="SIMV"?(ap?"":nb(p,B+"vrr","Set RR")):""}${vc?nb(p,B+"vvt",m==="PRVC"?"Target Vt":"Set Vt","mL"):""}${pc?nb(p,B+"vpi","Insp P","cmH₂O")+`<div class="nb"><span>Insp P is</span>${ichips(p,B+"pconv",["above","abs"]).replace(">above<",">above PEEP<").replace(">abs<",">absolute<")}</div>`:""}${ps?nb(p,B+"vps","PS","cmH₂O"):""}
       ${ap?nb(p,B+"phi","P high")+nb(p,B+"plo","P low")+nb(p,B+"thi","T high")+nb(p,B+"tlo","T low"):nb(p,B+"vpeep","PEEP")}${nb(p,B+"fio2","FiO₂")}${m==="Other"?tin(p,B+"vother","Settings",""):""}</div>
     ${lbl("Measured")}<div class="nbg">${nb(p,B+"mrr","Actual RR")}${nb(p,B+"mvt","Exhaled Vt","mL")}${nb(p,B+"mve","Ve","L/min")}${nb(p,B+"pip","PIP")}${nb(p,B+"pplat","Pplat")}${nb(p,B+"tpeep","Total PEEP")}</div>
-    <div class="fbh">Calculations ${help("dp")} ${help("pbw")}</div><div id="calc-resp">${calcBox(respCalc(p))}</div>`;
+    <div class="fbh">Calculations ${help("dp")} ${help("pbw")}</div><div id="calc-resp">${calcBox(respCalc(p))}</div>
+    <div class="nbg"><div class="nb"><span>SBT ${help("satsbt")}</span>${ichips(p,B+"sbt",["Not eligible","Eligible","Passed","Failed","Deferred"])}</div><div class="nb"><span>Extubation</span>${ichips(p,B+"extub",["Not ready","Possible today","Planned","Extubated"])}</div></div>`;
   }
+  {const vr=ventReport(p,"std");if(s&&vr.line)h+=`<div class="calcs"><div><b>As presented:</b> ${esc(vr.line)}${vr.meas?"<br>"+esc(vr.meas):""}</div>${vr.miss.length?`<div class="miss">Missing: ${esc(vr.miss.join(", "))}</div>`:""}</div>`}
   h+=`${lbl("Blood gases")}${abgs(p)}
     ${ta(B+"plan","Respiratory plan","oxygenation/ventilation adequate? lung-protective? synchrony? secretions? SAT / SBT / extubation readiness? barriers to liberation")}`;
   return isec(p,"r","icu-r","Respiratory & ventilator",h,{cnt:esc(supTxt(r))});
@@ -344,7 +349,11 @@ function micuGI(p){
 }
 function micuDevices(p){
   const unrev=(p.dev||[]).filter(d=>d.type&&d.needD!==today()).length;
-  return `<details open id="icu-dev" class="icusec"><summary>Lines, tubes & drains <span class="cnt">${unrev?unrev+" need review":""}</span></summary><div class="body">${devices(p)}</div></details>`;
+  const okd=ic0(p).devOK;
+  return `<details open id="icu-dev" class="icusec"><summary>Lines, tubes & drains <span class="cnt">${unrev?unrev+" need review":""}${okd?" · inventory ✓":""}</span></summary><div class="body">
+    <div class="calcs"><div><b>As presented:</b> ${devInventory(p)}</div></div>
+    <div class="toolbar" style="margin:0 0 8px"><button class="btn ${okd?"pri":""}" data-act="icuDevOK">${okd?"✓ Inventory confirmed complete "+esc(okd):"Confirm inventory is complete for today"}</button></div>
+    ${devices(p)}</div></details>`;
 }
 function micuLabs(p,which){
   const c=a=>ncell(p,which,"lab",a,AN[a][1],false);
@@ -361,7 +370,7 @@ function micuSysAP(p){
   const titles=p.problems.map(x=>x.p).filter(filled);
   const anyOld=SYS.some(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).length);
   return `${anyOld?`<div class="oldbar">Gray = carried over from ${esc(mmdd(p.apFrom)||"yesterday")}. Edit a field to make it current, or tap ✓. <button data-act="icuSysKeepAll">Mark all current</button></div>`:""}
-  ${lbl("Problem list (link problems to systems below)")}${p.problems.map((pr,i)=>`<div class="vrow"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem"><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div>`).join("")}
+  ${lbl("Problem list — #1 is the primary ICU problem; link problems to systems below")}${p.problems.map((pr,i)=>`<div class="vrow"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="${i?"Problem":"Primary ICU problem"}"><button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button><button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div>`).join("")}
   <button class="add" data-act="addProb">＋ Problem</button>
   ${SYS.map(([k,l])=>{const s=(p.sys||{})[k]||{},old=s.old||{};
     return `<div class="prob sysap"><div class="ph"><b>${esc(l)}</b>${Object.keys(old).length?`<button class="mini keep" data-act="icuSysKeep" data-v="${k}">✓</button>`:""}</div>
@@ -394,67 +403,6 @@ function micuBadges(p){
   return `<span class="bdg cs">MICU</span>`+b.map(x=>`<span class="bdg cs">${esc(x)}</span>`).join("");
 }
 
-/* ---------- MICU presenting view (full / brief) ---------- */
-let presBrief=false;
-function renderPresentMicu(p){
-  const T=p.today||{},ic=ic0(p),r=ic.r||{},h=ic.h||{},n=ic.n||{},rn=ic.rn||{},cv=ic.cv||{},gi=ic.gi||{},icu=p.icu||{};
-  const txt=v=>filled(v)?`<p>${esc(v).replace(/\n/g,"<br>")}</p>`:"";
-  const sec=(label,html,sk)=>html&&String(html).replace(/<[^>]+>/g,"").trim()?`<section class="ps ${sk&&(p.icuOld||{})[sk]?"oldtxt":""}"><h4>${label}${sk&&(p.icuOld||{})[sk]?` <span class="stale">copied ${esc(mmdd(p.icuOld[sk]))} — not checked</span>`:""}</h4><div>${html}</div></section>`:"";
-  const line=a=>a.filter(x=>x&&String(x).trim()).join(" · ");
-  const stale=d=>`<span class="stale">from ${esc(mmdd(d)||"yesterday")} — not updated</span>`;
-  const hd=hday(icu.hAdm),idd=hday(icu.iAdm),m=mapCalc(p),u=uopCalc(p);
-  const evs=(ic.ev||[]).filter(e=>filled(e.what)||filled(e.type)).map(e=>`<li>${esc(evTxt(e))}</li>`).join("");
-  const hemo=line([m&&!m.bad&&`MAP ${m.v}${m.calc?" (calc from cuff BP)":""}`,filled(h.mapGoal)&&"goal "+esc(h.mapGoal),filled(h.mapLow)&&"low O/N "+esc(h.mapLow),filled(h.hrR)&&"HR "+esc(h.hrR),filled(h.tR)&&"T "+esc(h.tR)])
-    +(dripsLine(p,"h.press")?`<p><b>Pressors:</b> ${esc(dripsLine(p,"h.press"))}</p>`:"")
-    +(line([h.cr&&"cap refill "+h.cr,h.ext&&"extremities "+h.ext.toLowerCase(),h.mot&&"mottling "+h.mot.toLowerCase(),filled((T.lab||{}).lac)&&`lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}`])?`<p>${line([h.cr&&"cap refill "+esc(h.cr),h.ext&&"extremities "+esc(h.ext.toLowerCase()),h.mot&&"mottling "+esc(h.mot.toLowerCase()),filled((T.lab||{}).lac)&&`lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}`])}</p>`:"")
-    +(presBrief?"":txt(h.plan));
-  const resp=`${supTxt(r)?`<p>${esc(supTxt(r))}${filled((T.vit||{}).spo2)?` · SpO₂ ${esc(T.vit.spo2)}%`:""}</p>`:""}`
-    +(isVent(r)&&!presBrief?`<p>${line([filled(r.mrr)&&"RR "+esc(r.mrr),filled(r.mvt)&&"Vte "+esc(r.mvt),filled(r.mve)&&"Ve "+esc(r.mve),filled(r.pip)&&"PIP "+esc(r.pip),filled(r.pplat)&&"Pplat "+esc(r.pplat)])}</p>${respCalc(p).filter(x=>x.v!=="—").map(x=>`<div class="pc">${esc(x.l)} ${esc(x.v)}</div>`).join("")}`:"")
-    +(ic.abg||[]).map(g=>`<p>${esc(abgTxt(g))}${abgInterp(g).filter(x=>/^P\/F \d/.test(x)).map(x=>" · "+esc(x.split(" (")[0])).join("")}</p>`).join("")
-    +(presBrief?"":txt(r.plan));
-  const neuro=line([n.ms&&esc(n.ms),filled(n.rass)&&"RASS "+esc(n.rass)+(filled(n.rassT)?" (target "+esc(n.rassT)+")":""),filled(n.cam)&&"CAM "+esc(n.cam),filled(n.cmd)&&"follows commands: "+esc(n.cmd),filled(n.pain)&&"pain "+esc(n.pain)])
-    +(dripsLine(p,"n.sed")?`<p><b>Sedation:</b> ${esc(dripsLine(p,"n.sed"))}</p>`:"")+(presBrief?"":txt(n.plan));
-  const renal=ioLine(p)+line([u&&u.v&&`UOP ${u.v} mL/kg/h`,crRatio(p)&&esc(crRatio(p)),filled(rn.cum)&&"cumulative "+esc(rn.cum),filled(rn.diur)&&esc(rn.diur),rn.rrt&&rn.rrt!=="None"&&esc(rn.rrt)+(rn.rrt==="CRRT"&&filled(rn.uf)?` UF ${esc(rn.uf)} mL/h`:"")])+(presBrief?"":txt(rn.plan));
-  const idl=(p.abx||[]).filter(a=>a.name).map(a=>`<div>${esc(abxTxt(a))}${filled(a.ind)?" — "+esc(a.ind):""}</div>`).join("")+(p.cx||[]).map(c=>`<div class="${c.st==="Positive"?"abn":""}">${esc(cxText(c))}</div>`).join("")+txt((ic.id||{}).resp)+(presBrief?"":txt((ic.id||{}).plan));
-  const exL=exLines(T.ex).map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("");
-  const plan=p.apMode==="sys"?SYS.map(([k,l])=>{const s=(p.sys||{})[k]||{},old=s.old&&Object.keys(s.old).length;if(!filled(s.a)&&!filled(s.pl))return"";
-      return `<div class="pp ${old?"oldtxt":""}"><b>${esc(l)}</b>${(s.link||[]).length?` <span class="tsb">${esc(s.link.join(", "))}</span>`:""}${old?stale(p.apFrom):""}${!presBrief&&filled(s.a)?`<div>${esc(s.a).replace(/\n/g,"<br>")}</div>`:""}${filled(s.pl)?`<div class="plan">→ ${esc(s.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("")
-    :p.problems.filter(pr=>(pr.p+pr.a+pr.pl).trim()).map((pr,i)=>`<div class="pp"><b>${i+1}. ${esc(pr.p)}</b>${!presBrief&&pr.a.trim()?`<div>${esc(pr.a)}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl)}</div>`:""}</div>`).join("");
-  const g=ic.g||{},goals=GOALS.filter(([k])=>filled(g[k])).map(([k,l])=>`<div><b>${esc(l)}:</b> ${esc(g[k]).replace(/\n/g,"<br>")}</div>`).join("");
-  const chk=ic.chk||{},flags=ICHK.flatMap(([,it])=>it).filter(([k])=>chk[k]==="N"||chk[k]==="D").map(([k,l])=>`${esc(l)} (${chk[k]==="N"?"no":"deferred"})`);
-  const devs=(p.dev||[]).filter(d=>d.type).map(d=>`${esc(d.type)}${filled(d.site)?" "+esc(d.site):""}${hday(d.date)?" d"+hday(d.date):""}${d.needD===today()&&d.need?" — needed: "+esc(d.need.toLowerCase()):" — need not reviewed"}`).join(", ");
-  const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}${t.cat?` <span class="tsb">${esc(t.cat)}</span>`:""}</li>`).join("");
-  const i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1],st=ic.st||{};
-  $("main").innerHTML=`<div class="pres">
-    <div class="ph1">${esc(p.name)||"Patient"}</div>
-    <div class="ph2">${[p.room&&"Rm "+esc(p.room),hd&&"HD "+hd,idd&&"ICU d"+idd,p.code&&"Code: "+esc(p.code)].filter(Boolean).join(" · ")}</div>
-    <div class="chips noprint" style="margin:6px 0"><button class="chip ${presBrief?"":"on"}" data-act="icuBrief" data-v="0">Full</button><button class="chip ${presBrief?"on":""}" data-act="icuBrief" data-v="1">Brief follow-up</button></div>
-    ${filled(p.story)?`<div class="story pst ${p.storyOld?"stale-s":""}"><div class="sh"><b>TL;DR</b>${p.storyOld?`<span class="stale">not updated since yesterday</span>`:""}</div><div class="${p.storyOld?"oldtxt":""}">${esc(p.story).replace(/\n/g,"<br>")}</div></div>`:""}
-    ${sec("One-liner",(filled(p.oneliner)?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")+(presBrief?"":`<p class="meta">${esc(line([icu.dx,icu.comorb]))}</p>`))}
-    ${sec("Why ICU today",line([(st.why||[]).map(esc).join(", "),esc(st.whyT||"")])+(st.traj?`<p><b>${esc(st.traj)}</b>${filled(st.trajT)?" — "+esc(st.trajT):""}</p>`:""),"st")}
-    ${sec("Overnight",(evs?`<ul>${evs}</ul>`:"")+txt(p.on))}
-    ${sec("Hemodynamics",hemo,"h")}
-    ${sec("Respiratory",resp,"r")}
-    ${sec("Neuro / sedation",neuro,"n")}
-    ${sec("Renal / I/O",renal,"rn")}
-    ${presBrief?"":sec("Labs",(hasLabs(p,"today")?fish(p,"today",true):"")+trackTable(p,true)+txt(T.labs))}
-    ${sec("ID",idl,"id")}
-    ${presBrief?"":sec("Cardiac",line([cv.rhy&&esc(cv.rhy),filled(cv.tele)&&esc(cv.tele),filled(cv.trop)&&"trop "+esc(cv.trop),filled(icu.lvef)&&esc(icu.lvef)]),"cv")}
-    ${presBrief?"":sec("GI / nutrition / endo",line([gi.diet&&esc(gi.diet)+(gi.diet==="Tube feeds"&&filled(gi.tfr)?" "+esc(gi.tfr):""),filled(gi.lbm)&&"last BM "+esc(mmdd(gi.lbm)),filled(gi.glu)&&"glucose "+esc(gi.glu),filled(gi.ins)&&esc(gi.ins),filled(gi.ster)&&esc(gi.ster)]),"gi")}
-    ${presBrief?"":sec("Imaging",(p.img||[]).map(r=>`<div>${esc(imgText(r))}</div>`).join(""))}
-    ${presBrief?"":sec("Exam",exL+txt(T.exam))}
-    ${sec("Lines / tubes",devs)}
-    ${sec(p.apMode==="sys"?"Plan by system":"Assessment &amp; plan",plan)}
-    ${sec("Today's goals",goals,"g")}
-    ${sec("Checklist — no / deferred",flags.length?`<ul>${flags.map(f=>`<li>${f}</li>`).join("")}</ul>`:"")}
-    ${sec("To-do",todos?`<ul>${todos}</ul>`:"")}
-    <div class="pnav noprint">
-      <button class="btn" ${prev?`data-act="tab" data-id="${prev.id}"`:"disabled"}>← ${prev?esc(tabLabel(prev,i-1)):"—"}</button>
-      <button class="btn" data-act="present">✎ Edit</button>
-      <button class="btn" ${next?`data-act="tab" data-id="${next.id}"`:"disabled"}>${next?esc(tabLabel(next,i+1)):"—"} →</button>
-    </div></div>`;
-}
-
 /* ---------- actions, freshness, rollover ---------- */
 const ROW_TPL={drip:()=>({drug:"",cur:"",unit:"",max:""}),ev:()=>({type:"",time:"",what:"",intv:"",resp:""}),abg:()=>({type:"ABG",time:""}),
   dev:()=>({type:"",site:"",date:today()}),abx:()=>({name:"",start:today()})};
@@ -483,7 +431,9 @@ function icuAct(a,b,p,i){
     case"icuMode":p.mode=b.dataset.v;markTs("mode");if(p.mode==="micu"&&!p.apMode){p.apMode="sys";markTs("apMode")}rr();toast(p.mode==="micu"?"MICU mode — your general-medicine fields are all still here.":"General medicine mode — MICU data is kept, just hidden.");break;
     case"icuAp":p.apMode=b.dataset.v;markTs("apMode");rr();break;
     case"icuPickM":{const k=b.dataset.k,v=b.dataset.v;let l=getPath(p,k);if(!Array.isArray(l)){l=[];setPath(p,k,l)}const j=l.indexOf(v);if(j>=0)l.splice(j,1);else l.push(v);markTs(k);icuFresh(p,k);b.classList.toggle("on",j<0);save();break}
-    case"icuAddRow":{const path=b.dataset.path;let l=getPath(p,path);if(!Array.isArray(l)){l=[];setPath(p,path,l)}l.push(ROW_TPL[b.dataset.tpl]());markTs(path);icuFresh(p,path+".");rr();break}
+    case"icuAddRow":{const path=b.dataset.path;let l=getPath(p,path);if(!Array.isArray(l)){l=[];setPath(p,path,l)}
+      if(path==="today.icu.h.press"&&getPath(p,"today.icu.h.pressNone")){setPath(p,"today.icu.h.pressNone",false);markTs("today.icu.h.pressNone")}
+      if(path==="today.icu.n.sed"&&getPath(p,"today.icu.n.sedNone")){setPath(p,"today.icu.n.sedNone",false);markTs("today.icu.n.sedNone")}l.push(ROW_TPL[b.dataset.tpl]());markTs(path);icuFresh(p,path+".");rr();break}
     case"icuDelRow":{const path=b.dataset.path,l=getPath(p,path)||[];if(!confirm("Remove this row?"))break;l.splice(i,1);markTs(path);rr();break}
     case"icuNeed":{const d=p.dev[i];d.need=d.needD===today()&&d.need===b.dataset.v?"":b.dataset.v;d.needD=today();markTs("dev");rr();break}
     case"icuCopy":{const s=b.dataset.sec,src=pi0(p)[s];if(!src)break;
@@ -500,6 +450,7 @@ function icuAct(a,b,p,i){
     case"icuBrief":presBrief=b.dataset.v==="1";render();break;
     case"icuDefMode":S.defMode=S.defMode==="micu"?"gen":"micu";saveNow();$("mDef").textContent="New patients start in: "+(S.defMode==="micu"?"MICU":"General medicine");break;
     case"icuPractice":S.practice=!S.practice;saveNow();hide("menu");render();break;
+    default:presAct(a,b,p,i);
   }
 }
 function micuRollover(p){
