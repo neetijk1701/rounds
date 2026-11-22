@@ -9,7 +9,7 @@ const PSECS=[["tldr","TL;DR"],["oneliner","One-liner & ICU diagnosis"],["days","
  ["neuro","Neuro / sedation"],["io","I/O, urine output & renal"],["exam","Exam"],["labs","Lab trends"],["micro","Micro, antibiotics & imaging"],
  ["ap","Assessment & plan"],["goals","Today's goals"],["devices","Lines / tubes / drains"],["checklist","ICU checklist"],["dispo","Disposition & barriers"],["todos","To-do"]];
 const PSEC_L=Object.fromEntries(PSECS);
-const DEF_PROFILE=()=>({id:"default",name:"Default",fmt:"sys",ap:"int",vent:"std",order:PSECS.map(x=>x[0]),hide:[],sys:SYS.map(x=>x[0])});
+const DEF_PROFILE=()=>({id:"default",name:"Default",fmt:"auto",ap:"int",vent:"std",order:PSECS.map(x=>x[0]),hide:[],sys:SYS.map(x=>x[0])});
 function profiles(){const l=(S.prefs&&S.prefs.profiles)||[];return l.length?l:[DEF_PROFILE()]}
 function curProfile(){
   const l=profiles(),pr=clone(l.find(x=>x.id===(S.prefs||{}).cur)||l[0]);
@@ -20,6 +20,23 @@ function curProfile(){
 function savePrefs(mut){
   S.prefs=S.prefs||{profiles:[DEF_PROFILE()],cur:"default"};if(!S.prefs.profiles||!S.prefs.profiles.length)S.prefs.profiles=[DEF_PROFILE()];
   mut(S.prefs);S.prefs.ts=Date.now();if(S.sync)S.sync.dirty=true;saveNow();schedulePush();
+}
+
+/* ---------- which A&P layout this patient gets ----------
+   "auto": systems-based when the patient is complicated (invasive vent, pressors/inotropes, RRT, or ≥2 organ supports),
+   prioritized problem list otherwise. A per-patient choice (p.presFmt) overrides the profile. */
+function autoFmt(p){
+  const ic=ic0(p),r=ic.r||{},sup=[];
+  if(isVent(r))sup.push("ventilator");else if(["HFNC","CPAP","BiPAP"].includes(r.sup))sup.push(r.sup);
+  if((((ic.h||{}).press)||[]).some(x=>x.drug))sup.push("pressors");
+  const rr=(ic.rn||{}).rrt;if(rr&&rr!=="None")sup.push(rr);
+  const complex=isVent(r)||sup.includes("pressors")||(rr&&rr!=="None")||sup.length>=2;
+  return {fmt:complex?"sys":"prob",why:complex?`complicated — ${sup.join(", ")}`:(sup.length?`one organ support (${sup[0]})`:"no organ support documented")};
+}
+function effFmt(p,prof){
+  if(p.presFmt==="sys"||p.presFmt==="prob")return {fmt:p.presFmt,why:"set for this patient"};
+  if(prof.fmt==="auto")return autoFmt(p);
+  return {fmt:prof.fmt,why:`profile “${prof.name}”`};
 }
 
 /* ---------- mode-aware ventilator / O2 report ---------- */
@@ -131,7 +148,8 @@ function apHtml(p,prof,brief){
 
 /* ---------- section registry for the oral presentation ---------- */
 const miss=t=>`<span class="miss">${t}</span>`;
-function presSections(p,prof,brief){
+function presSections(p,prof0,brief){
+  const prof=Object.assign({},prof0,{fmt:effFmt(p,prof0).fmt});
   const T=p.today||{},ic=ic0(p),r=ic.r||{},h=ic.h||{},n=ic.n||{},rn=ic.rn||{},icu=p.icu||{},st=ic.st||{},v=T.vit||{};
   const txt=x=>filled(x)?`<p>${esc(x).replace(/\n/g,"<br>")}</p>`:"",j=a=>a.filter(x=>x&&String(x).trim()).join(" · ");
   const stale=d=>` <span class="stale">from ${esc(mmdd(d)||"yesterday")} — not updated</span>`;
@@ -193,9 +211,10 @@ function renderPresentMicu(p){
     <div class="ph1">${esc(p.name)||"Patient"}</div>
     <div class="ph2">${[p.room&&"Rm "+esc(p.room),hday(icu.hAdm)&&"HD "+hday(icu.hAdm),hday(icu.iAdm)&&"ICU d"+hday(icu.iAdm),p.code&&"Code: "+esc(p.code)].filter(Boolean).join(" · ")}</div>
     <div class="pfmt noprint">
+      ${(()=>{const e=effFmt(p,prof),pf=p.presFmt||"";return `<div class="chips"><span class="pfl">A&amp;P:</span>${[["","Auto"],["sys","Systems"],["prob","Prioritized problems"]].map(([v,l])=>`<button class="chip ${pf===v?"on":""}" data-act="icuPresFmt" data-v="${v}">${l}</button>`).join("")}</div>
+        <div class="meta">Presenting ${e.fmt==="sys"?"systems-based":"as a prioritized problem list"} — ${esc(e.why)}${pf?"":prof.fmt==="auto"?" (auto: systems for complicated patients, prioritized problems for the rest)":""}</div>`})()}
       <div class="chips">${profiles().map(x=>`<button class="chip ${x.id===prof.id?"on":""}" data-act="icuPcPick" data-v="${esc(x.id)}">${esc(x.name)}</button>`).join("")}<button class="chip" data-act="icuPcOpen">⚙ Customize</button></div>
-      <div class="chips"><button class="chip ${prof.fmt==="sys"?"on":""}" data-act="icuPcQuick" data-k="fmt" data-v="sys">Systems</button><button class="chip ${prof.fmt==="prob"?"on":""}" data-act="icuPcQuick" data-k="fmt" data-v="prob">Problems</button>
-        <span class="sep"></span><button class="chip ${presBrief?"":"on"}" data-act="icuBrief" data-v="0">Full</button><button class="chip ${presBrief?"on":""}" data-act="icuBrief" data-v="1">Brief</button></div>
+      <div class="chips"><button class="chip ${presBrief?"":"on"}" data-act="icuBrief" data-v="0">Full</button><button class="chip ${presBrief?"on":""}" data-act="icuBrief" data-v="1">Brief</button></div>
     </div>
     ${pc.length?`<details class="precheck noprint" open><summary>⚠ ${pc.length} thing${pc.length>1?"s":""} to check before presenting</summary><ul>${pc.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:`<div class="precheck ok noprint">✓ Nothing missing or stale that the app can see</div>`}
     ${presSections(p,prof,presBrief)}
@@ -213,7 +232,7 @@ function pcSheet(){
   const d=pcDraft,box=el.querySelector(".box"),SL=Object.fromEntries(SYS);
   box.innerHTML=`<h3>Presentation format</h3>
     <label class="nb wide"><span>Profile name (e.g. the attending)</span><input type="text" id="pcName" value="${esc(d.name)}"></label>
-    <div class="fbh">A&amp;P organized by</div><div class="chips">${[["sys","Systems"],["prob","Problems"]].map(([v,l])=>`<button class="chip ${d.fmt===v?"on":""}" data-act="icuPcSet" data-k="fmt" data-v="${v}">${l}</button>`).join("")}</div>
+    <div class="fbh">A&amp;P organized by (patients can override)</div><div class="chips">${[["auto","Auto — systems if complicated, else prioritized problems"],["sys","Always systems"],["prob","Always prioritized problems"]].map(([v,l])=>`<button class="chip ${d.fmt===v?"on":""}" data-act="icuPcSet" data-k="fmt" data-v="${v}">${l}</button>`).join("")}</div>
     <div class="fbh">Assessment and plan</div><div class="chips">${[["int","Integrated (per item)"],["sep","Separate (all assessments, then all plans)"]].map(([v,l])=>`<button class="chip ${d.ap===v?"on":""}" data-act="icuPcSet" data-k="ap" data-v="${v}">${l}</button>`).join("")}</div>
     <div class="fbh">Ventilator settings order</div><div class="chips">${[["std","Mode, rate, Vt/Pinsp, FiO₂, PEEP"],["alt","Mode, Vt/Pinsp, rate, PEEP, FiO₂"]].map(([v,l])=>`<button class="chip ${d.vent===v?"on":""}" data-act="icuPcSet" data-k="vent" data-v="${v}">${l}</button>`).join("")}</div>
     <div class="fbh">Presentation order (✓ = shown)</div>
@@ -227,6 +246,7 @@ function pcSheet(){
 function presAct(a,b,p,i){
   const rer=()=>{if(p){const y=scrollY;render();scrollTo(0,y)}};
   switch(a){
+    case"icuPresFmt":p.presFmt=b.dataset.v;markTs("presFmt");save();rer();break;
     case"icuPcPick":savePrefs(s=>{s.cur=b.dataset.v});rer();break;
     case"icuPcQuick":{const k=b.dataset.k,v=b.dataset.v,pr=curProfile();savePrefs(s=>{let x=s.profiles.find(q=>q.id===pr.id);if(!x){x=pr;s.profiles.push(x)}x[k]=v;s.cur=x.id});rer();break}
     case"icuPcOpen":pcDraft=curProfile();pcSheet();break;
