@@ -50,7 +50,7 @@ function nb(p,path,label,unit=""){
   const v=getPath(p,path)??"",pv=path.startsWith("today.")?getPath(p,path.replace(/^today\./,"prior.")):undefined;
   return `<label class="nb"><span>${label}${unit?` <i>${unit}</i>`:""}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${path}" value="${esc(v)}"><em class="trw">${pv!==undefined?trendSimple(v,pv):""}</em></label>`;
 }
-const tin=(p,path,label,ph="",cls="")=>`<label class="nb wide ${cls}"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(p,path)??"")}" placeholder="${esc(ph)}"></label>`;
+const tin=(p,path,label,ph="",cls="")=>`<label class="nb wide ${cls}"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(p,path)??"")}"></label>`;
 const din=(p,path,label)=>`<label class="nb"><span>${label}</span><input type="date" data-k="${path}" value="${esc(getPath(p,path)??"")}"></label>`;
 const lbl=t=>`<div class="fbh">${t}</div>`;
 const sel=(path,opts,v,ph,rr)=>`<select data-k="${path}" ${rr?'data-rr="1"':""}><option value="">${ph}</option>${opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
@@ -177,14 +177,14 @@ function dripsLine(p,kind,which="today"){
 function events(p){
   const path="today.icu.ev",l=getPath(p,path)||[];
   return l.map((r,i)=>{const pre=`${path}.${i}.`;return `<div class="rw"><div class="rwh">${sel(pre+"type",EVT,r.type,"Event type")}<input type="text" class="site" style="max-width:110px" data-k="${pre}time" value="${esc(r.time||"")}" placeholder="time"><button class="x" data-act="icuDelRow" data-path="${path}" data-i="${i}" aria-label="Remove">×</button></div>
-    <div class="grid three"><input type="text" data-k="${pre}what" value="${esc(r.what||"")}" placeholder="What happened (MAP 55)"><input type="text" data-k="${pre}intv" value="${esc(r.intv||"")}" placeholder="Intervention (NE 0.06 → 0.12)"><input type="text" data-k="${pre}resp" value="${esc(r.resp||"")}" placeholder="Response / now (MAP 68)"></div></div>`}).join("")
+    <div class="grid three"><input type="text" data-k="${pre}what" value="${esc(r.what||"")}" placeholder="What happened"><input type="text" data-k="${pre}intv" value="${esc(r.intv||"")}" placeholder="Intervention"><input type="text" data-k="${pre}resp" value="${esc(r.resp||"")}" placeholder="Response"></div></div>`}).join("")
    +`<button class="add" data-act="icuAddRow" data-path="${path}" data-tpl="ev">＋ Overnight event</button>`;
 }
 const evTxt=r=>[r.time,r.type,r.what].filter(filled).join(" · ")+(filled(r.intv)?` → ${r.intv}`:"")+(filled(r.resp)?` → ${r.resp}`:"");
 function abgs(p){
   const path="today.icu.abg",l=getPath(p,path)||[];
   return l.map((g,i)=>{const pre=`${path}.${i}.`,ven=g.type==="VBG";
-    return `<div class="rw"><div class="rwh">${sel(pre+"type",["ABG","VBG"],g.type,"Type",1)}<input type="text" class="site" style="max-width:110px" data-k="${pre}time" value="${esc(g.time||"")}" placeholder="time"><input type="text" class="site" data-k="${pre}sup" value="${esc(g.sup||"")}" placeholder="support at draw (e.g. AC/VC PEEP 10)"><button class="x" data-act="icuDelRow" data-path="${path}" data-i="${i}" aria-label="Remove">×</button></div>
+    return `<div class="rw"><div class="rwh">${sel(pre+"type",["ABG","VBG"],g.type,"Type",1)}<input type="text" class="site" style="max-width:110px" data-k="${pre}time" value="${esc(g.time||"")}" placeholder="time"><input type="text" class="site" data-k="${pre}sup" value="${esc(g.sup||"")}" placeholder="support at draw"><button class="x" data-act="icuDelRow" data-path="${path}" data-i="${i}" aria-label="Remove">×</button></div>
       <div class="nbg">${nb(p,pre+"ph","pH"+(i?"":tip("ph")))}${nb(p,pre+"co2",(ven?"PvCO₂":"PaCO₂")+(i?"":tip("pco2")))}${ven?"":nb(p,pre+"po2","PaO₂")}${nb(p,pre+"hco3","HCO₃"+(i?"":tip("hco3")))}${nb(p,pre+"be","BE")}${filled(g.lac)?nb(p,pre+"lac","Lactate"):""}${nb(p,pre+"fio2","FiO₂ at draw"+(i?"":tip("pf")))}</div>
       <div class="calcs" id="calc-abg-${i}">${abgInterp(g).map(x=>`<div>${esc(x)}</div>`).join("")}</div></div>`}).join("")
    +`<button class="add" data-act="icuAddRow" data-path="${path}" data-tpl="abg">＋ Blood gas</button>`;
@@ -195,8 +195,8 @@ function devices(p){
   const l=p.dev||[];
   return l.map((d,i)=>{const pre=`dev.${i}.`,days=hday(d.date),rev=d.needD===today();
     const dk=devTipKey(d.type);
-    return `<div class="rw ${d.need==="No"&&rev?"pos":""}"><div class="rwh">${sel(pre+"type",DEV,d.type,"Device",1)}${dk?tip(dk):""}<input type="text" class="site" data-k="${pre}site" value="${esc(d.site||"")}" placeholder="site (R IJ…)"><input type="date" data-k="${pre}date" value="${esc(d.date||"")}"><span class="dd">${days?"day "+days:""}</span><button class="x" data-act="icuDelRow" data-path="dev" data-i="${i}" aria-label="Remove">×</button></div>
-      <div class="rwh">${d.type==="PIV"?`<input type="text" inputmode="numeric" class="site" style="max-width:90px" data-k="${pre}count" value="${esc(d.count||"")}" placeholder="how many">`:""}<input type="text" class="site" data-k="${pre}det" value="${esc(d.det||"")}" placeholder="${esc(DEV_DET[d.type]||"details")}"><input type="text" class="site" data-k="${pre}ind" value="${esc(d.ind||"")}" placeholder="indication"><input type="text" class="site" data-k="${pre}issue" value="${esc(d.issue||"")}" placeholder="issues / findings"></div>
+    return `<div class="rw ${d.need==="No"&&rev?"pos":""}"><div class="rwh">${sel(pre+"type",DEV,d.type,"Device",1)}${dk?tip(dk):""}<input type="text" class="site" data-k="${pre}site" value="${esc(d.site||"")}" placeholder="site"><input type="date" data-k="${pre}date" value="${esc(d.date||"")}"><span class="dd">${days?"day "+days:""}</span><button class="x" data-act="icuDelRow" data-path="dev" data-i="${i}" aria-label="Remove">×</button></div>
+      <div class="rwh">${d.type==="PIV"?`<input type="text" inputmode="numeric" class="site" style="max-width:90px" data-k="${pre}count" value="${esc(d.count||"")}" placeholder="how many">`:""}<input type="text" class="site" data-k="${pre}det" value="${esc(d.det||"")}" placeholder="details"><input type="text" class="site" data-k="${pre}ind" value="${esc(d.ind||"")}" placeholder="indication"><input type="text" class="site" data-k="${pre}issue" value="${esc(d.issue||"")}" placeholder="issues / findings"></div>
       <div class="rwh"><span class="dd">Still needed today? ${i?"":tip("devnec")}</span>${["Yes","No"].map(v=>`<button class="chip ${rev&&d.need===v?"on":""}" data-act="icuNeed" data-i="${i}" data-v="${v}">${v}</button>`).join("")}${!rev?`<span class="bdg">not reviewed today</span>`:""}<input type="text" class="site" data-k="${pre}plan" value="${esc(d.plan||"")}" placeholder="removal / replacement plan"></div></div>`}).join("")
    +`<button class="add" data-act="icuAddRow" data-path="dev" data-tpl="dev">＋ Line / tube / drain</button>`;
 }
@@ -405,7 +405,7 @@ function micuChecklist(p){
   return `<details id="icu-chk" class="icusec" open><summary>MICU Checklist <span class="cnt">${n}/${HCHK.length} answered${no?` · ${no} No`:""}</span></summary><div class="body">
     <div class="toolbar" style="margin:0 0 8px"><button class="btn pri" data-act="icuChkCopy">⧉ Copy as note text</button>${Object.keys(sg).length?`<button class="btn" data-act="icuChkFill">Fill from chart data</button>`:""}</div>
     ${HCHK.map(([k,l],i)=>`<div class="ck hck"><span><b>${i+1}.</b> ${esc(l)}${sg[k]&&!c[k]&&sg[k].v?` <em class="sug">${esc(sg[k].why)} → N/A?</em>`:""}</span><span class="seg4">${HCHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span>
-      ${c[k]||filled(nt[k])||(sg[k]&&sg[k].note)?`<input type="text" class="cknote" data-k="today.icu.chkN.${k}" value="${esc(nt[k]||"")}" placeholder="${esc(sg[k]&&sg[k].note?sg[k].note:"note (optional), e.g. home ppi")}">`:""}</div>`).join("")}
+      ${c[k]||filled(nt[k])||(sg[k]&&sg[k].note)?`<input type="text" class="cknote" data-k="today.icu.chkN.${k}" value="${esc(nt[k]||"")}" placeholder="${esc(sg[k]&&sg[k].note?sg[k].note:"note")}">`:""}</div>`).join("")}
     <details class="adv"><summary>More ICU prompts (not in the note) <span class="cnt">${xn}/${extra.length}</span></summary>
     <p class="legend">Yes / No / N/A / Deferred. Blank just means not reviewed yet.</p>
     ${ICHK.map(([g,items])=>`<div class="fbh">${g}</div>${items.map(([k,l])=>`<div class="ck"><span>${esc(l)}</span><span class="seg4">${CHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span></div>`).join("")}`).join("")}</details>

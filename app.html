@@ -559,7 +559,7 @@ function flashId(){const t=$("title");t.classList.remove("flash");void t.offsetW
 function renderTabs(){
   $("tabs").innerHTML=(S.patients.length?`<button class="tab all ${listOn?"on":""}" data-act="list">▤ All</button><button class="tab all ${afterOn?"on":""}" data-act="icuAfter">✓ After rounds</button>`:"")+S.patients.map((p,i)=>`<button class="tab ${p.id===cur&&!listOn&&!afterOn?"on":""}" data-act="tab" data-id="${p.id}">${esc(tabLabel(p,i))}<small>${progress(p)}%</small></button>`).join("");
 }
-const ta=(path,label,ph="")=>`<label class="f"><span>${label}</span><textarea rows="1" data-k="${path}" placeholder="${esc(ph)}">${esc(getPath(P(),path))}</textarea></label>`;
+const ta=(path,label,ph="")=>`<label class="f"><span>${label}</span><textarea rows="1" data-k="${path}">${esc(getPath(P(),path))}</textarea></label>`;
 const tx=(path,label)=>`<label class="f"><span>${label}</span><input type="text" data-k="${path}" value="${esc(getPath(P(),path))}"></label>`;
 function chkList(group,items){
   const p=P();
@@ -735,7 +735,7 @@ function exBox(p){
       <button class="seg ${s===1?"on ok":""}" data-act="exS" data-sys="${k}" data-v="1">WNL</button><button class="seg ${s===2?"on bad":""}" data-act="exS" data-sys="${k}" data-v="2">Abnl</button>
       ${s===1?`<span class="exn">${esc(norm)}</span>`:""}</div>
       ${s===2?`<div class="chips">${chips.map(c=>`<button class="chip ${f.includes(c)?"on":""}" data-act="exF" data-sys="${k}" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>`:""}
-      ${s===2||(s&&filled(e.t))?`<input type="text" class="ext" data-k="today.ex.${k}.t" value="${esc(e.t||"")}" placeholder="${s===2?"details (location, grade…)":"add detail (optional)"}">`:""}</div>`}).join("");
+      ${s===2||(s&&filled(e.t))?`<input type="text" class="ext" data-k="today.ex.${k}.t" value="${esc(e.t||"")}" placeholder="details">`:""}</div>`}).join("");
   return `<div id="exBox" class="exbox">
     ${nOld?`<div class="oldbar">Copied from ${esc(mmdd(p.examFrom)||"yesterday")} — ${nOld} gray system${nOld>1?"s":""} still to re-examine. Tap WNL / Abnl or ✓ to confirm each one. <button data-act="exKeepAll">✓ All re-examined, unchanged</button></div>`:""}
     <div class="toolbar" style="margin:0 0 6px"><button class="btn" data-act="exAll" title="${isM(p)?"":"Lines/drains are left for you to check"}">All WNL</button><button class="btn" data-act="exClear">Clear</button><button class="btn" data-act="copyExam">⟲ Copy yesterday's</button></div>${rows}</div>`;
@@ -745,10 +745,10 @@ function rowsBlock(p,kind){
   const html=rows.map((r,i)=>{const pre=`${kind}.${i}.`;
     if(kind==="cx")return `<div class="rw ${r.st==="Positive"?"pos":""}"><div class="rwh">${dsel(pre+"src",CX_SRC,r.src,"Source")}<input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",CX_ST,r.st,"Status")}<span class="dd">${cxDay(r)}</span><button class="x" data-act="delRow" data-kind="cx" data-i="${i}">×</button></div>
       <input type="text" data-k="${pre}org" value="${esc(r.org||"")}" placeholder="Organism / sensitivities"></div>`;
-    if(kind==="img")return `<div class="rw"><div class="rwh">${dsel(pre+"mod",IMG_MOD,r.mod,"Study")}<input type="text" class="site" data-k="${pre}site" value="${esc(r.site||"")}" placeholder="Site (chest, A/P…)"><input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",IMG_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="img" data-i="${i}">×</button></div>
-      ${conMod(r.mod)||r.con?`<div class="rwh">${dsel(pre+"con",IMG_CON,r.con,"Contrast?")}<input type="text" class="site" data-k="${pre}conN" value="${esc(r.conN||"")}" placeholder="contrast note (Cr, allergy premed…)"></div>`:""}
+    if(kind==="img")return `<div class="rw"><div class="rwh">${dsel(pre+"mod",IMG_MOD,r.mod,"Study")}<input type="text" class="site" data-k="${pre}site" value="${esc(r.site||"")}" placeholder="Site"><input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",IMG_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="img" data-i="${i}">×</button></div>
+      ${conMod(r.mod)||r.con?`<div class="rwh">${dsel(pre+"con",IMG_CON,r.con,"Contrast?")}<input type="text" class="site" data-k="${pre}conN" value="${esc(r.conN||"")}" placeholder="contrast note"></div>`:""}
       <textarea rows="1" data-k="${pre}imp" placeholder="Impression">${esc(r.imp||"")}</textarea></div>`;
-    return `<div class="rw"><div class="rwh"><input type="text" class="site" data-k="${pre}svc" value="${esc(r.svc||"")}" placeholder="Service (ID, GI…)">${dsel(pre+"st",CON_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="cons" data-i="${i}">×</button></div>
+    return `<div class="rw"><div class="rwh"><input type="text" class="site" data-k="${pre}svc" value="${esc(r.svc||"")}" placeholder="Service">${dsel(pre+"st",CON_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="cons" data-i="${i}">×</button></div>
       <textarea rows="1" data-k="${pre}recs" placeholder="Recs">${esc(r.recs||"")}</textarea></div>`;
   }).join("");
   const lbl={cx:"＋ Culture",img:"＋ Study",cons:"＋ Consult"}[kind];
@@ -830,7 +830,7 @@ function ioLine(p){
 
 /* ---------- new admission (R4) and admission values (R1) ---------- */
 const isNewAdm=p=>!!p.admDay&&p.admDay===((p.today||{}).date||today());
-const labLineBox=()=>`<div class="labline noprint"><input type="text" id="labLine" autocomplete="off" placeholder="Quick entry: Na 136 K 4.9 Cr 2.3 Hgb 7.9 Plt 88 Lac 2.1" enterkeyhint="done"><button class="btn" data-act="labLine">Fill</button></div>`;
+const labLineBox=()=>`<div class="labline noprint"><input type="text" id="labLine" autocomplete="off" placeholder="Quick lab entry" enterkeyhint="done"><button class="btn" data-act="labLine">Fill</button></div>`;
 function admBlock(p,NA){
   const A=p.adm||{},has=anyIn(A.lab,STRUCT.labs[1])||anyIn(A.vit,VITK);
   return `<details ${NA&&!has?"open":""} id="secAdm"><summary>Admission values <span class="cnt">${has?(A.date?"from "+esc(mmdd(A.date)):"saved"):"not saved"}</span></summary><div class="body">
@@ -935,7 +935,7 @@ function render(){
   if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Notes are saved in this browser on this device. They only leave it if you turn on sync, and then only encrypted.<br>A personal study aid, not the medical record.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
   const verify=p.today.verify.map((it,i)=>`<div class="vrow"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="today.verify.${i}.done" ${it.done?"checked":""}><input type="text" data-k="today.verify.${i}.t" value="${esc(it.t)}" placeholder="Lab to verify"><button class="x" data-act="delVerify" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
-  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.cat" aria-label="When">${TCAT.map(o=>`<option value="${o}" ${(t.cat||"")===o?"selected":""}>${o||"When"}</option>`).join("")}</select><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
+  const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="To-do"><select class="tst" data-k="todos.${i}.cat" aria-label="When">${TCAT.map(o=>`<option value="${o}" ${(t.cat||"")===o?"selected":""}>${o||"When"}</option>`).join("")}</select><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${isM(p)?`<button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button>`:""}${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
   const M=isM(p),NA=isNewAdm(p),hasPrior=!!(p.prior&&(p.prior.date||p.apFrom||(p.prior.dates&&Object.keys(p.prior.dates).length)));
@@ -1174,7 +1174,7 @@ function storyCard(p){
   const old=p.storyOld&&filled(p.story);
   return `<div class="story ${old?"stale-s":""}" id="storyCard"><div class="sh"><b>TL;DR</b><span class="meta" id="storyStamp">${esc(storyStamp(p))}</span>
     ${old?`<span class="stale" id="storyFlag">update after rounds</span><button class="mini keep" data-act="storyOk" id="storyOkBtn">✓ Still accurate</button>`:""}</div>
-    <textarea rows="2" data-k="story" class="${old?"old":""}" placeholder="The brief story: who they are, why they're here, what's happened, where it's headed">${esc(p.story||"")}</textarea></div>`;
+    <textarea rows="2" data-k="story" class="${old?"old":""}" >${esc(p.story||"")}</textarea></div>`;
 }
 function storyFresh(p,el){
   p.storyAt=Date.now();markTs("storyAt",p);
