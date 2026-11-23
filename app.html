@@ -101,6 +101,24 @@ input:focus,textarea:focus{outline:2px solid var(--acc2);outline-offset:-1px;bor
 .sheet .btn{width:100%;margin-top:8px;text-align:left}
 .sheet .note{font-size:12px;color:var(--mute);margin:8px 0 0}
 .hidden{display:none!important}
+
+.exr.old{color:var(--mute);background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(127,127,127,.08) 6px 12px);font-style:italic}
+.exr.old .seg.on{opacity:.55}
+.chip.big{font-weight:700;padding-left:14px;padding-right:14px}
+.lead{font-weight:650;margin:0 0 4px}
+.adm{color:var(--acc2);font-size:11px;font-weight:600;white-space:nowrap}
+.lc.nd b{min-height:1em}.lc.nd .ln{opacity:.35}
+.admbar{background:rgba(47,111,179,.1);border:1px solid var(--acc2);border-radius:10px;padding:9px 11px;font-size:13px;margin:8px 0}
+.btn.morn{width:100%;margin:8px 0;padding:11px;border-color:var(--acc2);color:var(--acc2)}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0}
+.mcard h4{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+.mhead{display:flex;flex-direction:column;gap:2px;margin:6px 2px}
+.mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mrow>span:first-child{flex:1 1 160px;font-weight:600}
+.mst{font-size:13px}.mst .ok{color:var(--ok)}
+.labline{display:flex;gap:6px;margin:4px 0 8px}.labline input{flex:1}
+.hck{flex-wrap:wrap}.hck .cknote{flex:1 1 100%;margin-top:4px;font-size:14px;padding:5px 8px}
+.sug{color:var(--acc2);font-style:normal;font-size:12px}
 .pfl{font-size:12px;font-weight:800;color:var(--mute);align-self:center;margin-right:2px}
 /* bedside reference ⓘ */
 .tipb{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin:0 0 0 3px;padding:0;border:0;background:none;color:var(--acc2);opacity:.75;font-size:14px;line-height:1;vertical-align:middle;border-radius:50%;cursor:pointer;text-transform:none;letter-spacing:0;font-weight:400}
@@ -396,6 +414,7 @@ const EXSYS=[
  ["lines","Lines/drains","sites c/d/i",["PIV","PICC","CVC","Foley","NGT","drain","site erythema","site tender"]]];
 const CX_SRC=["Blood","Urine","Sputum","Wound","Stool","CSF","Fluid","Other"], CX_ST=["Pending","NGTD","Positive","Final — neg"];
 const IMG_MOD=["CXR","CT","US","MRI","Echo","EKG","XR","Other"], IMG_ST=["Ordered","Pending read","Prelim","Final"];
+const IMG_CON=["w/ contrast","w/o contrast","w/ and w/o contrast"],conMod=m=>["CT","MRI","Other"].includes(m||"");
 const CON_ST=["Requested","Seen","Following","Signed off"];
 const TCAT=["","Urgent","Before rounds","During rounds","After rounds","Before sign-out","F/u result"];
 const CODES=["Full","DNR","DNR/DNI","Comfort"];
@@ -530,6 +549,7 @@ function resetIdle(){clearTimeout(idleT);if(key)idleT=setTimeout(lock,LOCK_MIN*6
 
 /* ---------- rendering ---------- */
 function progress(p){
+  if(isM(p))return micuProgress(p);
   const total=MEDS.length+EXAM.length+AP.length;
   const done=Object.values(p.medsChk).filter(Boolean).length+Object.values(p.examChk).filter(Boolean).length+Object.values(p.apChk).filter(Boolean).length;
   return Math.round(100*done/total);
@@ -585,13 +605,13 @@ function moveValues(p,keys,track=true){
   const has=k=>filled(T[k])||(STRUCT[k]&&anyIn(T[STRUCT[k][0]],STRUCT[k][1]))||(k==="exam"&&exHas(T.ex));
   const moved=keys.filter(has);
   if(!moved.length)return [];
-  if(track)undoSnap={pid:p.id,keys:moved,today:clone(T),prior:clone(Pr),examOld:p.examOld};
+  if(track)undoSnap={pid:p.id,keys:moved,today:clone(T),prior:clone(Pr),examOld:p.examOld,exOld:clone(p.exOld)};
   Pr.dates=Pr.dates||{};
   for(const k of moved){
     if(filled(T[k])){Pr[k]=T[k];Pr.dates[k]=d;T[k]=""}
     if(STRUCT[k]){const [o,ks]=STRUCT[k];T[o]=T[o]||{};Pr[o]=Pr[o]||{};Pr[o+"Dates"]=Pr[o+"Dates"]||{};
       for(const a of ks){if(!filled(T[o][a]))continue;Pr[o][a]=T[o][a];Pr[o+"Dates"][a]=d;T[o][a]=""}}
-    if(k==="exam"){if(exHas(T.ex)){Pr.ex=T.ex;Pr.exDate=d;T.ex={}}if(p.examOld){p.examOld=false;if(track)markTs("examOld",p)}}
+    if(k==="exam"){if(exHas(T.ex)){Pr.ex=T.ex;Pr.exDate=d;T.ex={}}if(p.examOld){p.examOld=false;if(track)markTs("examOld",p)}if(p.exOld&&Object.keys(p.exOld).length){p.exOld={};if(track)markTs("exOld",p)}}
     if(!Pr.dates[k]&&STRUCT[k])Pr.dates[k]=d;
   }
   if(track){markAll(p,"today",T);markAll(p,"prior",Pr)}
@@ -600,8 +620,8 @@ function moveValues(p,keys,track=true){
 function undoMove(){
   const u=undoSnap;undoSnap=null;hideToast();if(!u)return;
   const p=S.patients.find(x=>x.id===u.pid);if(!p)return;
-  p.today=u.today;p.prior=u.prior;p.examOld=u.examOld;
-  markAll(p,"today",p.today);markAll(p,"prior",p.prior);markTs("examOld",p);
+  p.today=u.today;p.prior=u.prior;p.examOld=u.examOld;p.exOld=u.exOld||{};
+  markAll(p,"today",p.today);markAll(p,"prior",p.prior);markTs("examOld",p);markTs("exOld",p);
   if(p.id===cur){const y=scrollY;render();scrollTo(0,y)}save();
 }
 function toast(msg,undo){
@@ -624,6 +644,23 @@ function trendOf(p,o,a){
   const nt=num(getPath(p,`today.${o}.${a}`));if(isNaN(nt))return "prev "+esc(pv)+priorAge(p,o,a);
   const d=nt-np;return (Math.abs(d)<1e-9?"→ ":d>0?"↑ ":"↓ ")+esc(pv)+priorAge(p,o,a);
 }
+/* R1: admission value, shown next to today's when one was saved */
+function admOf(p,o,a){const v=getPath(p,`adm.${o}.${a}`);return filled(v)?` <span class="adm">adm ${esc(v)}</span>`:""}
+function captureAdm(p,track=true){
+  const T=p.today||{},A=p.adm=p.adm||{};let n=0;
+  for(const [o,ks] of [["lab",STRUCT.labs[1]],["vit",VITK]]){A[o]=A[o]||{};for(const a of ks){if(filled((T[o]||{})[a])&&!filled(A[o][a])){A[o][a]=T[o][a];n++;if(track)markTs(`adm.${o}.${a}`,p)}}}
+  if(n&&!A.date){A.date=T.date||today();if(track)markTs("adm.date",p)}
+  return n;
+}
+/* P8: one-line lab entry — "Na 136 K 4.9 Cr 2.3 Hgb 7.9 plt 88" */
+const LAB_ALIAS={na:"na",sodium:"na",k:"k",potassium:"k",cl:"cl",chloride:"cl",co2:"co2",hco3:"co2",bicarb:"co2",tco2:"co2",bun:"bun",cr:"cr",creat:"cr",creatinine:"cr",scr:"cr",glu:"glu",glucose:"glu",gluc:"glu",bg:"glu",
+  ca:"ca",calcium:"ca",mg:"mg",magnesium:"mg",phos:"phos",phosphorus:"phos",po4:"phos",wbc:"wbc",hgb:"hgb",hb:"hgb",hemoglobin:"hgb",hct:"hct",plt:"plt",plts:"plt",platelets:"plt",
+  lac:"lac",lactate:"lac",alt:"alt",ast:"ast",tbili:"tbili",tb:"tbili",bili:"tbili",alb:"alb",albumin:"alb",inr:"inr",ptt:"ptt",fib:"fib",fibrinogen:"fib",ica:"ica",tg:"tg",ck:"ck",trop:"trop",troponin:"trop"};
+function parseLabs(txt){
+  const out={},bad=[],re=/([A-Za-z][A-Za-z0-9]*)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/g;let m;
+  while((m=re.exec(txt))){const k=LAB_ALIAS[m[1].toLowerCase()];if(k)out[k]=m[2];else bad.push(m[1])}
+  return {out,bad};
+}
 function priorAge(p,o,a){
   const pd=((p.prior||{})[o+"Dates"]||{})[a],td=(p.today||{}).date||today();
   if(!pd||!/^\d{4}-\d\d-\d\d$/.test(pd))return"";const n=dayDiff(pd,td);
@@ -633,8 +670,8 @@ const hasLabs=(p,which)=>anyIn(getPath(p,which+".lab"),STRUCT.labs[1]);
 function priorDate(p,o){const d=Object.values((p.prior&&p.prior[o+"Dates"])||{}).filter(Boolean).sort();return d.length?d[d.length-1]:""}
 function ncell(p,which,o,a,label,ro,cls=""){
   const v=getPath(p,`${which}.${o}.${a}`)??"",fl=flagOf(o,a,v);
-  if(ro)return `<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><b>${esc(v)||"—"}</b><span class="tr">${trendOf(p,o,a)}</span></div>`;
-  return `<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${which}.${o}.${a}" data-num="${o}.${a}" value="${esc(v)}">${which==="today"?`<span class="trw" data-tr="${o}.${a}">${trendOf(p,o,a)}</span>`:""}</div>`;
+  if(ro)return filled(v)?`<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><b>${esc(v)}</b><span class="tr">${trendOf(p,o,a)}${admOf(p,o,a)}</span></div>`:`<div class="lc nd ${cls}"><span class="ln">${esc(label)}</span><b></b><span class="tr"></span></div>`;
+  return `<div class="lc ${fl} ${cls}"><span class="ln">${esc(label)}</span><input type="text" inputmode="decimal" autocomplete="off" data-k="${which}.${o}.${a}" data-num="${o}.${a}" value="${esc(v)}">${which==="today"?`<span class="trw" data-tr="${o}.${a}">${trendOf(p,o,a)}${admOf(p,o,a)}</span>`:""}</div>`;
 }
 function fish(p,which,ro){
   const c=a=>ncell(p,which,"lab",a,AN[a][1],ro);
@@ -651,14 +688,14 @@ function vitBox(p,which){
   return `<div class="fishes"><div class="fb vit">${c("tmax","Tmax")}${c("hr","HR")}
     <div class="lc bp"><span class="ln">BP</span><span class="bpi"><input type="text" inputmode="decimal" data-k="${which}.vit.sbp" data-num="vit.sbp" value="${esc(v.sbp||"")}" class="${flagOf("vit","sbp",v.sbp)}">/<input type="text" inputmode="decimal" data-k="${which}.vit.dbp" data-num="vit.dbp" value="${esc(v.dbp||"")}"></span>${which==="today"?`<span class="trw" data-tr="vit.sbp">${trendOf(p,"vit","sbp")}</span>`:""}</div>
     ${c("rr","RR")}${c("spo2","SpO₂ %")}${c("wt","Wt kg")}</div>
-    ${isM(p)&&which==="today"?`<div class="fb o2"><span class="ln">O₂</span><span class="meta">Set in Respiratory & ventilator</span></div>`:`<div class="fb o2"><span class="ln">O₂</span><div class="chips">${O2DEV.map(d=>`<button class="chip ${dev===d?"on":""}" data-act="pick" data-k="${which}.vit.o2dev" data-v="${d}">${d}</button>`).join("")}</div>
+    ${isM(p)&&which==="today"?`<div class="fb o2"><span class="ln">O₂</span><span class="meta">Set in Respiratory & ventilator</span></div>`:`<div class="fb o2"><span class="ln">O₂</span><div class="chips">${O2DEV.map(d=>`<button class="chip ${dev===d?"on":""}${d==="RA"?" big":""}" data-act="pick" data-k="${which}.vit.o2dev" data-v="${d}">${d==="RA"?"Room air":d}</button>`).join("")}</div>
     ${dev&&dev!=="RA"?`<input type="text" class="o2f" data-k="${which}.vit.o2flow" value="${esc(v.o2flow||"")}" placeholder="${dev==="NC"?"L/min":"settings / FiO₂"}">`:""}</div>`}</div>`;
 }
 function ioNet(io){
   if(!io||!anyIn(io,[...IO_IN,...IO_OUT]))return null;
   const n=k=>num(io[k])||0, hasIn=anyIn(io,IO_IN), hasOut=anyIn(io,IO_OUT);
-  const i=IO_IN.reduce((s,k)=>s+n(k),0), o=IO_OUT.reduce((s,k)=>s+n(k),0);
-  return {i,o,hasIn,hasOut,net:hasIn&&hasOut?i-o:null};
+  const r1=x=>Math.round(x*10)/10, i=r1(IO_IN.reduce((s,k)=>s+n(k),0)), o=r1(IO_OUT.reduce((s,k)=>s+n(k),0));
+  return {i,o,hasIn,hasOut,net:hasIn&&hasOut?r1(i-o):null};
 }
 const fmtNet=r=>r?`In ${r.hasIn?r.i:"—"} · Out ${r.hasOut?r.o:"—"} · ${r.net===null?`<span class="partial">Net not calculable — enter ${r.hasIn?"output":"intake"} (type 0 if truly none)</span>`:`<b>Net ${r.net>0?"+":""}${r.net} mL</b>`}`:"";
 function ioBox(p,which){
@@ -669,21 +706,39 @@ function ioBox(p,which){
 }
 function exLines(ex){
   return EXSYS.map(([k,l,norm])=>{const e=(ex||{})[k];if(!e)return null;
-    if(e.s===1)return {l,t:filled(e.t)?norm+"; "+e.t:norm,ab:false};
-    if(e.s===2)return {l,t:[...(e.f||[]),e.t].filter(filled).join(", ")||"abnormal",ab:true};
-    if(filled(e.t))return {l,t:e.t,ab:false};return null}).filter(Boolean);
+    if(e.s===1)return {k,l,t:filled(e.t)?norm+"; "+e.t:norm,ab:false,det:filled(e.t)};
+    if(e.s===2)return {k,l,t:[...(e.f||[]),e.t].filter(filled).join(", ")||"abnormal",ab:true};
+    if(filled(e.t))return {k,l,t:e.t,ab:false,det:true};return null}).filter(Boolean);
 }
+/* exam for presenting: "unremarkable except …", with copied-not-re-examined systems called out */
+function exSummary(p,brief){
+  const T=p.today||{},lines=exLines(T.ex),old=p.exOld||{},L=Object.fromEntries(EXSYS.map(x=>[x[0],x[1]]));
+  const shown=lines.filter(x=>!(isM(p)&&x.k==="lines"&&!x.ab&&!x.det));
+  const ab=shown.filter(x=>x.ab||x.det),nl=shown.filter(x=>!x.ab&&!x.det);
+  const notA=EXSYS.filter(([k])=>!(isM(p)&&k==="lines")&&!lines.some(x=>x.k===k)).map(x=>x[1]);
+  const cp=k=>old[k]?` <span class="stale">copied — re-examine</span>`:"";
+  let h="";
+  if(shown.length){
+    h+=`<p>${ab.some(x=>x.ab)?(nl.length?"Unremarkable except:":"Findings:"):"Unremarkable"+(nl.length?` (${nl.length} systems)`:"")+(ab.length?", with:":"")}</p>`;
+    h+=ab.map(x=>`<div class="${x.ab?"abn":""} ${old[x.k]?"oldtxt":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}${cp(x.k)}</div>`).join("");
+    if(!brief&&nl.length)h+=`<div class="na">Normal: ${nl.map(x=>esc(x.l)+(old[x.k]?" (copied)":"")).join(", ")}</div>`;
+    const oc=nl.filter(x=>old[x.k]).map(x=>x.l);if(brief&&oc.length)h+=`<div class="na"><span class="stale">Copied, not re-examined: ${esc(oc.join(", "))}</span></div>`;
+    if(!brief&&notA.length)h+=`<div class="na">Not assessed: ${esc(notA.join(", "))}</div>`;
+  }
+  return h;
+}
+const exStale=p=>!!(p.examOld||Object.keys(p.exOld||{}).length);
 function exBox(p){
-  const ex=p.today.ex||{};
-  const rows=EXSYS.map(([k,l,norm,chips])=>{const e=ex[k]||{},s=e.s||0,f=e.f||[];
-    return `<div class="exr ${s===2?"ab":""}"><div class="exh"><b>${l}</b>
+  const ex=p.today.ex||{},old=p.exOld||{},nOld=Object.keys(old).length;
+  const rows=EXSYS.filter(([k])=>!(isM(p)&&k==="lines")).map(([k,l,norm,chips])=>{const e=ex[k]||{},s=e.s||0,f=e.f||[];
+    return `<div class="exr ${s===2?"ab":""} ${old[k]?"old":""}" data-exsys="${k}"><div class="exh"><b>${l}</b>${old[k]?`<button class="mini keep" data-act="exKeep" data-sys="${k}" title="Re-examined, unchanged">✓</button>`:""}
       <button class="seg ${s===1?"on ok":""}" data-act="exS" data-sys="${k}" data-v="1">WNL</button><button class="seg ${s===2?"on bad":""}" data-act="exS" data-sys="${k}" data-v="2">Abnl</button>
       ${s===1?`<span class="exn">${esc(norm)}</span>`:""}</div>
       ${s===2?`<div class="chips">${chips.map(c=>`<button class="chip ${f.includes(c)?"on":""}" data-act="exF" data-sys="${k}" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>`:""}
       ${s===2||(s&&filled(e.t))?`<input type="text" class="ext" data-k="today.ex.${k}.t" value="${esc(e.t||"")}" placeholder="${s===2?"details (location, grade…)":"add detail (optional)"}">`:""}</div>`}).join("");
-  return `<div id="exBox" class="exbox ${p.examOld?"old":""}">
-    ${p.examOld?`<div class="oldbar">Copied from ${esc(mmdd(p.examFrom)||"yesterday")} — gray until you re-examine. Tap anything to make it current.</div>`:""}
-    <div class="toolbar" style="margin:0 0 6px"><button class="btn" data-act="exAll">All WNL</button><button class="btn" data-act="exClear">Clear</button><button class="btn" data-act="copyExam">⟲ Copy yesterday's</button></div>${rows}</div>`;
+  return `<div id="exBox" class="exbox">
+    ${nOld?`<div class="oldbar">Copied from ${esc(mmdd(p.examFrom)||"yesterday")} — ${nOld} gray system${nOld>1?"s":""} still to re-examine. Tap WNL / Abnl or ✓ to confirm each one. <button data-act="exKeepAll">✓ All re-examined, unchanged</button></div>`:""}
+    <div class="toolbar" style="margin:0 0 6px"><button class="btn" data-act="exAll" title="${isM(p)?"":"Lines/drains are left for you to check"}">All WNL</button><button class="btn" data-act="exClear">Clear</button><button class="btn" data-act="copyExam">⟲ Copy yesterday's</button></div>${rows}</div>`;
 }
 function rowsBlock(p,kind){
   const rows=p[kind]||[],dsel=(path,opts,v,ph)=>`<select data-k="${path}"><option value="">${ph}</option>${opts.map(o=>`<option ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
@@ -691,6 +746,7 @@ function rowsBlock(p,kind){
     if(kind==="cx")return `<div class="rw ${r.st==="Positive"?"pos":""}"><div class="rwh">${dsel(pre+"src",CX_SRC,r.src,"Source")}<input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",CX_ST,r.st,"Status")}<span class="dd">${cxDay(r)}</span><button class="x" data-act="delRow" data-kind="cx" data-i="${i}">×</button></div>
       <input type="text" data-k="${pre}org" value="${esc(r.org||"")}" placeholder="Organism / sensitivities"></div>`;
     if(kind==="img")return `<div class="rw"><div class="rwh">${dsel(pre+"mod",IMG_MOD,r.mod,"Study")}<input type="text" class="site" data-k="${pre}site" value="${esc(r.site||"")}" placeholder="Site (chest, A/P…)"><input type="date" data-k="${pre}date" value="${esc(r.date||"")}">${dsel(pre+"st",IMG_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="img" data-i="${i}">×</button></div>
+      ${conMod(r.mod)||r.con?`<div class="rwh">${dsel(pre+"con",IMG_CON,r.con,"Contrast?")}<input type="text" class="site" data-k="${pre}conN" value="${esc(r.conN||"")}" placeholder="contrast note (Cr, allergy premed…)"></div>`:""}
       <textarea rows="1" data-k="${pre}imp" placeholder="Impression">${esc(r.imp||"")}</textarea></div>`;
     return `<div class="rw"><div class="rwh"><input type="text" class="site" data-k="${pre}svc" value="${esc(r.svc||"")}" placeholder="Service (ID, GI…)">${dsel(pre+"st",CON_ST,r.st,"Status")}<button class="x" data-act="delRow" data-kind="cons" data-i="${i}">×</button></div>
       <textarea rows="1" data-k="${pre}recs" placeholder="Recs">${esc(r.recs||"")}</textarea></div>`;
@@ -705,42 +761,45 @@ function cxDay(r){
   return d>=0?`d${d}`:"";
 }
 const cxText=r=>[r.src||"Culture",r.date?`(${mmdd(r.date)})`:"",r.st?"— "+r.st+(r.st==="NGTD"||r.st==="Pending"?` ${cxDay(r)}`:""):""].filter(Boolean).join(" ")+(filled(r.org)?": "+r.org:"");
-const imgText=r=>[r.mod||"Study",r.site,r.date?`(${mmdd(r.date)})`:"",r.st?"— "+r.st:""].filter(Boolean).join(" ")+(filled(r.imp)?": "+r.imp:"");
+const imgText=r=>[r.mod||"Study",r.site,r.con,r.date?`(${mmdd(r.date)})`:"",r.st?"— "+r.st:""].filter(Boolean).join(" ")+(filled(r.imp)?": "+r.imp:"");
 const consText=r=>[r.svc||"Consult",r.st?"— "+r.st:""].filter(Boolean).join(" ")+(filled(r.recs)?": "+r.recs:"");
 
 /* ---------- presenting view ---------- */
 function renderPresent(p){
-  const T=p.today||{},txt=v=>String(v||"").trim()?`<p>${esc(v).replace(/\n/g,"<br>")}</p>`:"";
-  const sec=(label,html)=>html&&html.trim()?`<section class="ps"><h4>${label}</h4><div>${html}</div></section>`:"";
+  const T=p.today||{},txt=v=>String(v||"").trim()?`<p>${esc(v).replace(/\n/g,"<br>")}</p>`:"",brief=presBrief,NA=isNewAdm(p);
+  const sec=(label,html)=>html&&String(html).replace(/<[^>]+>/g,"").trim()?`<section class="ps"><h4>${label}</h4><div>${html}</div></section>`:"";
   const stale=d=>`<span class="stale">from ${esc(mmdd(d)||"yesterday")} — not updated</span>`;
-  const unv=(T.verify||[]).filter(v=>v.t.trim()&&!v.done).map(v=>esc(v.t));
   const abnL=EXAM.filter(([k])=>p.examChk[k]===2).map(([,l])=>esc(l.split(":")[0].replace(/\?$/,"").trim()));
   const abn=abnL.length?`<b>Flagged:</b> ${abnL.join(", ")}`:"";
   const probs=p.problems.filter(pr=>(pr.p+pr.a+pr.pl).trim()).map((pr,i)=>{const old=pr.old&&Object.keys(pr.old).length;
-    return `<div class="pp ${old?"oldtxt":""}"><b>${i+1}. ${esc(pr.p)||"(untitled)"}</b>${old?stale(p.apFrom):""}${pr.a.trim()?`<div>${esc(pr.a).replace(/\n/g,"<br>")}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("");
+    return `<div class="pp ${old?"oldtxt":""}"><b>${i+1}. ${esc(pr.p)||"(untitled)"}</b>${old?stale(p.apFrom):""}${!brief&&pr.a.trim()?`<div>${esc(pr.a).replace(/\n/g,"<br>")}</div>`:""}${pr.pl.trim()?`<div class="plan">→ ${esc(pr.pl).replace(/\n/g,"<br>")}</div>`:""}</div>`}).join("");
+  const sysPl=SYS.filter(([k])=>filled(((p.sys||{})[k]||{}).pl)||(!brief&&filled(((p.sys||{})[k]||{}).a))).map(([k,l])=>{const x=p.sys[k];return `<div class="pp"><b>${esc(l)}</b>${!brief&&filled(x.a)?`<div>${esc(x.a)}</div>`:""}${filled(x.pl)?`<div class="plan">→ ${esc(x.pl)}</div>`:""}</div>`}).join("");
   const todos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).map(t=>`<li>${esc(t.t)}${t.st?` <span class="tsb">${esc(t.st)}</span>`:""}</li>`).join("");
-  const exArr=exLines(T.ex),notA=EXSYS.filter(([k])=>!((T.ex||{})[k]||{}).s&&!filled(((T.ex||{})[k]||{}).t)).map(x=>x[1]);
-  const exL=exArr.map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")+(exArr.length&&notA.length?`<div class="na">Not assessed: ${esc(notA.join(", "))}</div>`:"");
-  const exam=(p.examOld&&(String(T.exam||"").trim()||exL)?`<span class="stale">copied from ${esc(mmdd(p.examFrom)||"yesterday")} — re-examine</span>`:"")+
-    `<div class="${p.examOld?"oldtxt":""}">${exL}${txt(T.exam)}</div>`+(abn?`<p class="abn">${abn}</p>`:"")+`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`;
-  const i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1];
+  const exam=exSummary(p,brief)+`<div class="${p.examOld?"oldtxt":""}">${txt(T.exam)}${p.examOld&&filled(T.exam)?`<span class="stale">copied — re-examine</span>`:""}</div>`+(abn&&!brief?`<p class="abn">${abn}</p>`:"")+(brief?"":`<div class="${p.examNotesOld?"oldtxt":""}">${txt(p.examNotes)}</div>`);
+  const labs=brief?(()=>{const a=abnLabs(p);return a.length?`<p>${esc(a.join(" · "))}</p>`:hasLabs(p,"today")?"<p>Labs unremarkable</p>":""})()+txt(T.labs):(hasLabs(p,"today")?fish(p,"today",true):"")+txt(T.labs);
+  const cx=(p.cx||[]).filter(c=>!brief||c.st==="Positive"||c.st==="Pending"||c.st==="NGTD").map(r=>`<div class="${r.st==="Positive"?"abn":""}">${esc(cxText(r))}</div>`).join("")+(brief?"":txt(T.cultures));
+  const im=(p.img||[]).filter(x=>!brief||x.st!=="Final"||filled(x.imp)).map(r=>`<div>${esc(imgText(r))}</div>`).join("")+(brief?"":txt(T.imaging));
+  const bg=BACKGROUND.filter(([k])=>filled(p[k])).map(([k,l])=>`<div><b>${esc(l)}:</b> ${esc(p[k]).replace(/\n/g,"<br>")}</div>`).join("");
+  const pc=genPreCheck(p),i=S.patients.indexOf(p),prev=S.patients[i-1],next=S.patients[i+1];
+  const devs=(p.dev||[]).some(d=>d.type)?devInventory(p):"";
+  const parts=NA?[
+    sec("One-liner / chief concern",p.oneliner.trim()?txt(p.oneliner):""),sec("HPI",txt(p.hpi)),sec("ROS",brief?"":txt(p.ros)),sec("PMH · PSH · meds · allergies · social · family",bg),
+    sec("Vitals",vitLine(p)+(brief?"":txt(T.vitals))),sec("Exam",exam),sec("Labs",labs),sec("Imaging &amp; studies",im),sec("Cultures",cx),sec("Pathology",txt(T.path)),
+    sec("Consults",(p.cons||[]).map(r=>`<div>${esc(consText(r))}</div>`).join("")),sec("Assessment &amp; plan",probs),sec("To-do",todos?`<ul>${todos}</ul>`:"")
+  ]:[
+    sec("One-liner",p.oneliner.trim()?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:""),
+    sec("Overnight",txt(p.on)),sec("Vitals",vitLine(p)+(brief?"":txt(T.vitals))),sec("I/O",ioLine(p)+(brief?"":txt(T.io))),
+    sec("Exam",exam),sec("Labs",labs),sec("Cultures",cx),sec("Imaging",im),sec("Pathology",brief?"":txt(T.path)),
+    sec("Consults",(p.cons||[]).filter(c=>!brief||c.st!=="Signed off").map(r=>`<div>${esc(consText(r))}</div>`).join("")+(brief?"":txt(T.consults))),
+    sec("Lines, tubes &amp; drains",devs),
+    sec("Assessment &amp; plan",probs+(sysPl?`<div class="apg">Systems (from MICU stay)</div>${sysPl}`:"")),sec("To-do",todos?`<ul>${todos}</ul>`:"")];
   $("main").innerHTML=`<div class="pres">
     <div class="ph1">${esc(p.name)||"Patient"}</div>
-    <div class="ph2">${[p.room&&"Rm "+esc(p.room),p.code&&"Code: "+esc(p.code),T.date&&esc(mmdd(T.date))].filter(Boolean).join(" · ")}</div>
+    <div class="ph2">${[p.room&&"Rm "+esc(p.room),p.code&&"Code: "+esc(p.code),T.date&&esc(mmdd(T.date)),NA&&"New admission"].filter(Boolean).join(" · ")}</div>
+    <div class="pfmt noprint"><div class="chips"><button class="chip ${brief?"":"on"}" data-act="icuBrief" data-v="0">Full</button><button class="chip ${brief?"on":""}" data-act="icuBrief" data-v="1">Brief</button></div></div>
+    ${pc.length?`<details class="precheck noprint" open><summary>⚠ ${pc.length} thing${pc.length>1?"s":""} to check before presenting</summary><ul>${pc.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:`<div class="precheck ok noprint">✓ Nothing missing or stale that the app can see</div>`}
     ${filled(p.story)?`<div class="story pst ${p.storyOld?"stale-s":""}"><div class="sh"><b>TL;DR</b><span class="meta">${esc(storyStamp(p))}</span>${p.storyOld?`<span class="stale">not updated since yesterday</span>`:""}</div><div class="${p.storyOld?"oldtxt":""}">${esc(p.story).replace(/\n/g,"<br>")}</div></div>`:""}
-    ${unv.length?`<div class="warnbar">Not verified yet: ${unv.join(", ")}</div>`:""}
-    ${sec("One-liner",p.oneliner.trim()?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")}
-    ${sec("Overnight",txt(p.on))}
-    ${sec("Vitals",vitLine(p)+txt(T.vitals))}
-    ${sec("I/O",ioLine(p)+txt(T.io))}
-    ${sec("Exam",String(T.exam||"").trim()||exL||abn||String(p.examNotes||"").trim()?exam:"")}
-    ${sec("Labs",(hasLabs(p,"today")?fish(p,"today",true):"")+txt(T.labs))}
-    ${sec("Cultures",(p.cx||[]).map(r=>`<div class="${r.st==="Positive"?"abn":""}">${esc(cxText(r))}</div>`).join("")+txt(T.cultures))}
-    ${sec("Imaging",(p.img||[]).map(r=>`<div>${esc(imgText(r))}</div>`).join("")+txt(T.imaging))}
-    ${sec("Pathology",txt(T.path))}
-    ${sec("Consults",(p.cons||[]).map(r=>`<div>${esc(consText(r))}</div>`).join("")+txt(T.consults))}
-    ${sec("Assessment &amp; plan",probs)}
-    ${sec("To-do",todos?`<ul>${todos}</ul>`:"")}
+    ${parts.join("")}
     <div class="pnav noprint">
       <button class="btn" ${prev?`data-act="tab" data-id="${prev.id}"`:"disabled"}>← ${prev?esc(tabLabel(prev,i-1)):"—"}</button>
       <button class="btn" data-act="present">✎ Edit</button>
@@ -750,11 +809,11 @@ function renderPresent(p){
 
 function vitLine(p){
   const v=(p.today||{}).vit||{},bits=[];
-  const s=(a,label,suf="")=>{if(!filled(v[a]))return;const fl=flagOf("vit",a,v[a]),tr=trendOf(p,"vit",a);bits.push(`${label} <span class="vv ${fl}">${esc(v[a])}${suf}</span>${tr?` <span class="tr">${tr}</span>`:""}`)};
+  const s=(a,label,suf="")=>{if(!filled(v[a]))return;const fl=flagOf("vit",a,v[a]),tr=trendOf(p,"vit",a);bits.push(`${label} <span class="vv ${fl}">${esc(v[a])}${suf}</span>${tr?` <span class="tr">${tr}</span>`:""}${admOf(p,"vit",a)}`)};
   s("tmax","Tmax");s("hr","HR");
-  if(filled(v.sbp)||filled(v.dbp)){const fl=flagOf("vit","sbp",v.sbp)||flagOf("vit","dbp",v.dbp),tr=trendOf(p,"vit","sbp");bits.push(`BP <span class="vv ${fl}">${esc(v.sbp||"?")}/${esc(v.dbp||"?")}</span>${tr?` <span class="tr">${tr}</span>`:""}`)}
+  if(filled(v.sbp)||filled(v.dbp)){const fl=flagOf("vit","sbp",v.sbp)||flagOf("vit","dbp",v.dbp),tr=trendOf(p,"vit","sbp");const ad=(p.adm||{}).vit||{};bits.push(`BP <span class="vv ${fl}">${esc(v.sbp||"?")}/${esc(v.dbp||"?")}</span>${tr?` <span class="tr">${tr}</span>`:""}${filled(ad.sbp)?` <span class="adm">adm ${esc(ad.sbp)}/${esc(ad.dbp||"?")}</span>`:""}`)}
   s("rr","RR");
-  if(filled(v.spo2)||filled(v.o2dev)){const fl=flagOf("vit","spo2",v.spo2);bits.push(`SpO₂ <span class="vv ${fl}">${esc(v.spo2||"?")}%</span>${v.o2dev?" on "+esc([v.o2dev==="RA"?"":v.o2flow,v.o2dev].filter(filled).join(" ")):""}`)}
+  if(filled(v.spo2)||filled(v.o2dev)){const fl=flagOf("vit","spo2",v.spo2);bits.push(`SpO₂ <span class="vv ${fl}">${esc(v.spo2||"?")}%</span>${v.o2dev?" on "+(v.o2dev==="RA"?"room air":esc([v.o2flow,v.o2dev].filter(filled).join(" "))):""}`)}
   s("wt","Wt"," kg");
   return bits.length?`<p>${bits.join(" · ")}</p>`:"";
 }
@@ -768,6 +827,75 @@ function ioLine(p){
   if(filled(io.stool))bits.push(`Stool ×${esc(io.stool)}`);
   return bits.length?`<p>${bits.join(" · ")}</p>`:"";
 }
+
+/* ---------- new admission (R4) and admission values (R1) ---------- */
+const isNewAdm=p=>!!p.admDay&&p.admDay===((p.today||{}).date||today());
+const labLineBox=()=>`<div class="labline noprint"><input type="text" id="labLine" autocomplete="off" placeholder="Quick entry: Na 136 K 4.9 Cr 2.3 Hgb 7.9 Plt 88 Lac 2.1" enterkeyhint="done"><button class="btn" data-act="labLine">Fill</button></div>`;
+function admBlock(p,NA){
+  const A=p.adm||{},has=anyIn(A.lab,STRUCT.labs[1])||anyIn(A.vit,VITK);
+  return `<details ${NA&&!has?"open":""} id="secAdm"><summary>Admission values <span class="cnt">${has?(A.date?"from "+esc(mmdd(A.date)):"saved"):"not saved"}</span></summary><div class="body">
+    <p class="meta">Shown next to today's values as "adm" so you can say "Cr 1.9, down from 2.3 on admission". ${NA?"On an admission day these fill in automatically from today's labs &amp; vitals at New day.":""}</p>
+    <div class="toolbar" style="margin:0 0 8px"><button class="btn" data-act="admSave">📌 Save today's labs &amp; vitals as admission values</button></div>
+    <label class="f" style="max-width:200px"><span>Admission date</span><input type="date" data-k="adm.date" value="${esc(A.date||"")}"></label>
+    <div class="fbh">Vitals on admission</div>${admVit(p)}${fish(p,"adm",false)}${isM(p)?micuLabs(p,"adm"):""}</div></details>`;
+}
+function admVit(p){
+  const c=(a,l)=>ncell(p,"adm","vit",a,l,false),v=(p.adm||{}).vit||{};
+  return `<div class="fishes"><div class="fb vit">${c("tmax","Tmax")}${c("hr","HR")}<div class="lc bp"><span class="ln">BP</span><span class="bpi"><input type="text" inputmode="decimal" data-k="adm.vit.sbp" data-num="vit.sbp" value="${esc(v.sbp||"")}">/<input type="text" inputmode="decimal" data-k="adm.vit.dbp" data-num="vit.dbp" value="${esc(v.dbp||"")}"></span></div>${c("rr","RR")}${c("spo2","SpO₂ %")}${c("wt","Wt kg")}</div></div>`;
+}
+
+/* ---------- P7: one-screen morning update ---------- */
+function renderMorning(p){
+  const M=isM(p),pd=p.prior.icuDate||p.prior.date||p.apFrom||"",yd=esc(mmdd(pd)||"yesterday"),ic=ic0(p),pr=pi0(p),old=p.icuOld||{};
+  const row=(label,state,btn)=>`<div class="mrow"><span>${label}</span><span class="mst">${state}</span>${btn||""}</div>`;
+  const done=t=>`<span class="ok">✓ ${t}</span>`,todo=t=>`<span class="miss">${t}</span>`;
+  const carry=[];
+  if(filled(p.story))carry.push(row("TL;DR",p.storyOld?todo("not updated"):done("current"),p.storyOld?`<button class="mini keep" data-act="storyOk">✓ Still accurate</button>`:""));
+  const apOld=p.onelinerOld||p.problems.some(x=>x.old&&Object.keys(x.old).length)||SYS.some(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).length);
+  if(apOld||filled(p.oneliner))carry.push(row("One-liner &amp; A&amp;P",apOld?todo("from "+yd+" — update after rounds or confirm"):done("current"),apOld?`<button class="mini" data-act="mornApOK">✓ Mark all current</button>`:""));
+  const nOld=Object.keys(p.exOld||{}).length,exT=exHas(p.today.ex);
+  carry.push(row("Exam",nOld?todo(nOld+" copied system"+(nOld>1?"s":"")+" to re-examine (below)"):exT?done("entered today"):todo("not entered"),!exT&&exHas(p.prior.ex)?`<button class="mini" data-act="copyExam">⟲ Copy ${yd}'s</button>`:""));
+  if(M)[["st","ICU status"],["r","Respiratory"],["h","Hemodynamics"],["n","Neuro / sedation"],["rn","Renal"],["id","Infection"],["cv","Cardiac"],["gi","GI / endo"]].forEach(([k,l])=>{
+    if(!sectionFilled(pr[k])&&!sectionFilled(ic[k]))return;
+    carry.push(row(l,old[k]?todo("copied — check against today's chart"):sectionFilled(ic[k])?done("entered today"):todo("not entered"),
+      old[k]?`<button class="mini keep" data-act="icuKeep" data-sec="${k}">✓ Checked</button>`:!sectionFilled(ic[k])&&sectionFilled(pr[k])?`<button class="mini" data-act="icuCopy" data-sec="${k}">⟲ Copy ${yd}'s</button>`:""))});
+  const devs=(p.dev||[]).map((d,i)=>[d,i]).filter(([d])=>d.type);
+  const devH=devs.length?devs.map(([d,i])=>`<div class="mrow"><span>${esc(devItem(d))}</span><span class="mst">still needed?</span>${["Yes","No"].map(v=>`<button class="chip sm ${d.needD===today()&&d.need===v?"on":""}" data-act="icuNeed" data-i="${i}" data-v="${v}">${v}</button>`).join("")}</div>`).join("")
+    +`<div class="mrow"><span>Inventory complete?</span><span class="mst">${ic.devOK?done("confirmed "+esc(ic.devOK)):todo("not confirmed")}</span><button class="mini" data-act="icuDevOK">${ic.devOK?"Undo":"✓ Confirm"}</button></div>`:"";
+  const B="today.icu.";
+  const icuNums=M?`<div class="fbh">Respiratory</div>${ichips(p,B+"r.sup",RSUP,false,RSUP_L)}
+      <div class="nbg">${isVent(ic.r)?nb(p,B+"r.fio2","FiO₂")+nb(p,B+"r.vpeep","PEEP"):["HFNC","BiPAP","CPAP"].includes((ic.r||{}).sup)?nb(p,B+"r.fio2","FiO₂")+nb(p,B+"r.flow","Flow"):nb(p,B+"r.flow","Flow","L/min")}${nb(p,B+"r.spo2t","SpO₂ target","%")}</div>
+    <div class="fbh">Hemodynamics</div><div class="nbg">${nb(p,B+"h.map","MAP now")}${nb(p,B+"h.mapLow","Lowest MAP O/N")}${nb(p,B+"h.mapGoal","MAP goal")}</div>${drips(p,"h.press")}
+    <div class="fbh">Neuro</div><div class="nb"><span>RASS now</span>${ichips(p,B+"n.rass",RASS)}</div>${drips(p,"n.sed")}
+    <div class="fbh">Fluids &amp; glucose</div><div class="nbg">${nb(p,B+"rn.uopHrs","UOP interval","h, if not 24")}${tin(p,B+"rn.netGoal","Net goal today","−1 L")}${tin(p,B+"gi.glu","Glucose range","140–210")}${tin(p,B+"gi.ins","Insulin","drip 3 u/h")}</div>
+    <div class="fbh">Overnight events</div>${events(p)}`:`${ta("on","Overnight events")}`;
+  $("main").innerHTML=`<div class="morning">
+    <div class="mhead"><b>☀️ Morning update</b><span class="meta">${esc(p.name||"")}${p.room?" · Rm "+esc(p.room):""} — everything that changes overnight, on one screen</span></div>
+    <section class="mcard"><h4>1 · Carry over from ${yd}</h4>${carry.join("")}${devH?`<div class="fbh">Lines, tubes &amp; drains</div>${devH}`:""}</section>
+    <section class="mcard"><h4>2 · Today's numbers</h4>
+      <div class="fbh">Vitals</div>${vitBox(p,"today")}
+      <div class="fbh">I/O (24 h)</div>${ioBox(p,"today")}
+      <div class="fbh">Labs</div>${labLineBox()}${fish(p,"today",false)}${M?micuLabs(p,"today"):""}
+      ${icuNums}</section>
+    <section class="mcard"><h4>3 · Exam</h4>${exBox(p)}</section>
+    <div class="toolbar noprint"><button class="btn" data-act="morning">✎ Full form</button><button class="btn pri" data-act="mornPresent">▶ Present</button></div></div>`;
+  $("main").querySelectorAll("textarea").forEach(grow);
+}
+
+/* ---------- P10: general-medicine pre-presentation check ---------- */
+function genPreCheck(p){
+  const out=[],T=p.today||{};
+  const nOld=Object.keys(p.exOld||{}).length;if(nOld)out.push(`Exam: ${nOld} copied system${nOld>1?"s":""} not re-examined`);
+  if(p.examOld&&filled(T.exam))out.push("Exam free text copied from yesterday");
+  if(!anyIn(T.vit,VIT.map(v=>v[0])))out.push("Vitals not entered");
+  if(!hasLabs(p,"today")&&!filled(T.labs))out.push("No labs entered today");
+  const unv=(T.verify||[]).filter(v=>filled(v.t)&&!v.done).map(v=>v.t);if(unv.length)out.push(`Not verified yet: ${unv.join(", ")}`);
+  const stale=[p.storyOld&&filled(p.story)&&"TL;DR",p.onelinerOld&&"one-liner",p.problems.some(x=>x.old&&Object.keys(x.old).length)&&"A&P"].filter(Boolean);
+  if(stale.length)out.push(`Still from yesterday: ${stale.join(", ")}`);
+  if(isNewAdm(p)&&!filled(p.hpi))out.push("New admission: HPI not entered");
+  return out;
+}
+const abnLabs=p=>STRUCT.labs[1].filter(a=>filled(getPath(p,"today.lab."+a))&&flagOf("lab",a,p.today.lab[a])).map(a=>{const tr=trendOf(p,"lab",a).replace(/<[^>]+>/g,"").replace(/\s+\S+ ago$/,"");return `${AN[a][1]} ${p.today.lab[a]}${flagOf("lab",a,p.today.lab[a])==="hi"?"↑":"↓"}${tr&&!/^prev/.test(tr)?` (${tr.split(" ")[0]} from ${tr.split(" ")[1]})`:""}`});
 
 /* ---------- all-patients list ---------- */
 function renderList(){
@@ -802,6 +930,7 @@ function render(){
   const p=P();
   $("practiceBar").classList.toggle("hidden",!(S&&S.practice));$("mPractice").textContent=(S&&S.practice?"✓ ":"")+"🧪 Practice mode (fictional patients only)";
   $("mDef").textContent="New patients start in: "+(S&&S.defMode==="micu"?"MICU":"General medicine");
+  if(p&&mode==="morning"){$("main").dataset.pid=p.id;$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");renderMorning(p);return}
   if(p&&mode==="present"){$("main").dataset.pid="";$("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");if(isM(p))renderPresentMicu(p);else renderPresent(p);return}
   if(!p){$("main").innerHTML=`<div class="empty"><p>No patients yet.</p><button class="btn pri" data-act="addPt">＋ Add a patient</button><p class="meta" style="margin-top:20px">Notes are saved in this browser on this device. They only leave it if you turn on sync, and then only encrypted.<br>A personal study aid, not the medical record.</p></div>`;$("title").textContent="Rounds";return}
   $("title").textContent=(p.room?("Rm "+p.room+" · "):"")+(p.name||"New patient");
@@ -809,11 +938,16 @@ function render(){
   const todos=(p.todos||[]).map((t,i)=>`<div class="vrow todo ${t.done?"done":""}"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--ok)" data-k="todos.${i}.done" ${t.done?"checked":""}><input type="text" data-k="todos.${i}.t" value="${esc(t.t)}" placeholder="e.g. f/u blood cx, call GI"><select class="tst" data-k="todos.${i}.cat" aria-label="When">${TCAT.map(o=>`<option value="${o}" ${(t.cat||"")===o?"selected":""}>${o||"When"}</option>`).join("")}</select><select class="tst" data-k="todos.${i}.st" aria-label="Status">${["","Ordered","Pending","Resulted"].map(o=>`<option value="${o}" ${(t.st||"")===o?"selected":""}>${o||"Status"}</option>`).join("")}</select><button class="x" data-act="delTodo" data-i="${i}" aria-label="Remove">×</button></div>`).join("");
   const openTodos=(p.todos||[]).filter(t=>t.t.trim()&&!t.done).length;
   const probs=p.problems.map((pr,i)=>`<div class="prob"><div class="ph"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="Problem">${isM(p)?`<button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button>`:""}${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div><div class="grid two">${ta("problems."+i+".a","Assessment")}${ta("problems."+i+".pl","Plan")}</div></div>`).join("");
-  const M=isM(p);
+  const M=isM(p),NA=isNewAdm(p),hasPrior=!!(p.prior&&(p.prior.date||p.apFrom||(p.prior.dates&&Object.keys(p.prior.dates).length)));
+  const sysAny=SYS.some(([k])=>filled(((p.sys||{})[k]||{}).a)||filled(((p.sys||{})[k]||{}).pl)),devAny=(p.dev||[]).some(d=>d.type);
+  const culturesHtml=`<details open id="secCx"><summary>Cultures <span class="cnt">${(p.cx||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cx")}<div style="margin-top:6px">${fieldTA("today","cultures","Culture notes")}</div></div></details>`;
   $("main").innerHTML=`
   ${storyCard(p)}${M?micuTop(p):""}
+  ${NA?`<div class="admbar"><b>New admission today.</b> Present as an H&amp;P: one-liner (ID / CC) → HPI → PMH, meds, allergies, social → vitals → exam → labs &amp; imaging → assessment &amp; plan. Today's labs &amp; vitals become the admission values at New day. <button class="mini" data-act="admToggle" data-v="0">Make follow-up</button></div>`
+    :hasPrior?`<button class="btn morn noprint" data-act="morning">☀️ Morning update — copy &amp; confirm yesterday, enter today's numbers</button>`:""}
   <details open><summary>Patient info</summary><div class="body"><div class="grid two">
     ${tx("name","Name, Age")}${tx("room","Room")}${tx("pcp","PCP")}<div>${tx("code","Code status")}<div class="chips" style="margin-top:4px">${CODES.map(c=>`<button class="chip ${p.code===c?"on":""}" data-act="pick" data-k="code" data-v="${c}">${c}</button>`).join("")}</div></div></div>
+    <div class="nb" style="margin-top:8px"><span>Patient type</span><div class="chips"><button class="chip ${NA?"on":""}" data-act="admToggle" data-v="1">New admission today</button><button class="chip ${NA?"":"on"}" data-act="admToggle" data-v="0">Follow-up</button></div></div>
     <div class="nb" style="margin-top:8px"><span>Rounding mode</span><div class="chips">${[["gen","General medicine"],["micu","MICU"]].map(([v,l])=>`<button class="chip ${(p.mode||"gen")===v?"on":""}" data-act="icuMode" data-v="${v}">${l}</button>`).join("")}</div></div>
     ${M?micuInfo(p):""}
     <div class="grid" style="margin-top:8px">${ta("on","O/N",M?"Other overnight notes (structured events are in ICU status)":"Overnight events")}${ta("hpi","HPI")}${ta("ros","ROS")}</div></div></details>
@@ -823,7 +957,7 @@ function render(){
     ${todos}<button class="add" data-act="addTodo">＋ To-do</button>
     <p class="meta">Open to-dos carry over each day. Checked ones clear on New day.</p></div></details>
 
-  <details><summary>Background</summary><div class="body"><div class="grid two">${BACKGROUND.map(([k,l])=>ta(k,l)).join("")}</div></div></details>
+  <details ${NA?"open":""}><summary>Background${NA?" — PMH, meds, allergies, social":""}</summary><div class="body"><div class="grid two">${BACKGROUND.map(([k,l])=>ta(k,l)).join("")}</div></div></details>
 
   <details open id="secToday"><summary>Today's values — verified this AM</summary><div class="body">
     <label class="f" style="max-width:200px;margin-bottom:8px"><span>Date</span><input type="date" data-k="today.date" value="${esc(p.today.date)}"></label>
@@ -833,11 +967,11 @@ function render(){
     ${subh("today","vitals","Vitals")}${vitBox(p,"today")}${ta("today.vitals","Vitals notes (ranges, events)")}
     ${subh("today","io","I/O (24 h)")}${ioBox(p,"today")}${ta("today.io","I/O notes")}
     <div id="secExam"></div>${subh("today","exam","Exam")}${exBox(p)}<div style="margin-top:6px">${ta("today.exam","Exam — other findings")}</div>
-    <div id="secLabs"></div>${subh("today","labs","Labs")}${fish(p,"today",false)}${M?micuLabs(p,"today")+trackTable(p,false):""}${ta("today.labs","Other labs")}
+    <div id="secLabs"></div>${subh("today","labs","Labs")}${labLineBox()}${fish(p,"today",false)}${M?micuLabs(p,"today")+trackTable(p,false):""}${ta("today.labs","Other labs")}
     ${subh("today","path","Pathology")}${ta("today.path","Pathology")}</div></details>
-  ${M?micuResp(p)+micuHemo(p)+micuNeuro(p)+micuRenal(p)+micuID(p)+micuCV(p)+micuGI(p)+micuDevices(p):""}
-
-  <details open><summary>Cultures <span class="cnt">${(p.cx||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cx")}<div style="margin-top:6px">${fieldTA("today","cultures","Culture notes")}</div></div></details>
+  ${admBlock(p,NA)}
+  ${M?micuResp(p)+micuHemo(p)+micuNeuro(p)+micuRenal(p)+micuID(p)+culturesHtml+micuCV(p)+micuGI(p)+micuDevices(p):culturesHtml}
+  ${!M&&devAny?`<details open id="genDev"><summary>Lines, tubes &amp; drains <span class="cnt">from MICU</span></summary><div class="body">${devices(p)}</div></details>`:""}
   <details open><summary>Imaging &amp; studies <span class="cnt">${(p.img||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"img")}<div style="margin-top:6px">${fieldTA("today","imaging","Imaging notes")}</div></div></details>
   <details open><summary>Consults <span class="cnt">${(p.cons||[]).length||""}</span></summary><div class="body">${rowsBlock(p,"cons")}<div style="margin-top:6px">${fieldTA("today","consults","Consult notes")}</div></div></details>
 
@@ -851,33 +985,33 @@ function render(){
 
   <details ${M?"":"open"}><summary>Meds &amp; orders check <span class="cnt" id="cntMeds">${count(p.medsChk,MEDS.length)}</span></summary><div class="body"><div class="cols">${chkList("medsChk",MEDS)}</div></div></details>
 
-  <details ${M?"":"open"}><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
+  ${M?"":`<details open><summary>Exam checklist — usual suspects <span class="cnt" id="cntExam">${count(p.examChk,EXAM.length)}</span></summary><div class="body">
     <p class="legend">Tap to cycle: blank → ✓ checked/unremarkable → ! abnormal → blank</p>
     <div class="cols">${examList()}</div>
     <div style="margin-top:8px">${ta("examNotes","Exam notes / abnormal findings")}</div></div></details>
 
-  <details ${M?"":"open"}><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>
+  <details open><summary>A/P checklist <span class="cnt" id="cntAP">${count(p.apChk,AP.length)}</span></summary><div class="body"><div class="cols">${chkList("apChk",AP)}</div></div></details>`}
 
   <details open id="secAP"><summary>Assessment &amp; plan</summary><div class="body">
     ${M?`<div class="chips" style="margin-bottom:8px">${[["sys","Systems-based"],["","Problem-based"]].map(([v,l])=>`<button class="chip ${(p.apMode||"")===v?"on":""}" data-act="icuAp" data-v="${v}">${l}</button>`).join("")}</div>`:""}
-    ${M&&p.apMode==="sys"?ta("oneliner","One-liner")+`<div style="height:10px"></div>`+micuSysAP(p):`${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
-    <button class="add" data-act="addProb">＋ Problem</button>`}
+    ${M&&p.apMode==="sys"?apBanner(p)+ta("oneliner","One-liner")+`<div style="height:10px"></div>`+micuSysAP(p):`${apBanner(p)}${ta("oneliner","One-liner")}<div style="height:10px"></div>${probs}
+    <button class="add" data-act="addProb">＋ Problem</button>${!M&&sysAny?`<details class="adv" open><summary>Systems-based plans from the MICU stay</summary>${SYS.filter(([k])=>filled(((p.sys||{})[k]||{}).a)||filled(((p.sys||{})[k]||{}).pl)).map(([k,l])=>`<div class="prob sysap"><div class="ph"><b>${esc(l)}</b>${Object.keys(((p.sys||{})[k]||{}).old||{}).length?`<button class="mini keep" data-act="icuSysKeep" data-v="${k}">✓</button>`:""}</div><div class="grid two">${ta(`sys.${k}.a`,"Assessment")}${ta(`sys.${k}.pl`,"Plan")}</div></div>`).join("")}</details>`:""}`}
     <div style="margin-top:10px">${ta("today.dec","Decided on rounds (new orders, med changes, studies, consults, procedures)","fill in during / right after rounds — shows on the After rounds tab")}</div></div></details>
   ${M?micuGoals(p)+micuChecklist(p):""}
 
-  ${M?`<nav class="jump noprint"><button data-act="jump" data-to="icuSnap">Snap</button><button data-act="jump" data-to="icu-status">Status</button><button data-act="jump" data-to="icu-r">Resp</button><button data-act="jump" data-to="icu-h">Hemo</button><button data-act="jump" data-to="secAP">Plan</button><button data-act="jump" data-to="icu-goals">Goals</button><button data-act="present">▶</button></nav>`:`<nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>`}
+  ${M?`<nav class="jump noprint">${hasPrior&&!NA?`<button data-act="morning">☀️</button>`:""}<button data-act="jump" data-to="icuSnap">Snap</button><button data-act="jump" data-to="icu-status">Status</button><button data-act="jump" data-to="icu-r">Resp</button><button data-act="jump" data-to="icu-h">Hemo</button><button data-act="jump" data-to="secAP">Plan</button><button data-act="jump" data-to="icu-goals">Goals</button><button data-act="present">▶</button></nav>`:`<nav class="jump noprint"><button data-act="jump" data-to="storyCard">TL;DR</button><button data-act="jump" data-to="secTodo">To-do</button><button data-act="jump" data-to="secToday">Today</button><button data-act="jump" data-to="secExam">Exam</button><button data-act="jump" data-to="secLabs">Labs</button><button data-act="jump" data-to="secAP">A&amp;P</button><button data-act="present">▶</button></nav>`}
   <div class="toolbar noprint">
     <button class="btn" data-act="newDay">☀️ New day for this patient</button>
     <button class="btn danger" data-act="delPt">Remove patient</button>
   </div>
   <p class="meta noprint">"New day" moves today's values into Prior (blank fields keep their older Prior values), grays out the A&amp;P for you to update, and resets the checklists. Last edited ${new Date(p.updated).toLocaleString()}.</p>`;
   $("main").dataset.pid=p.id;
-  if(p.onelinerOld)$("main").querySelector('[data-k="oneliner"]').classList.add("old");
+  if(p.onelinerOld){const n=$("main").querySelector('[data-k="oneliner"]');if(n)n.classList.add("old")}
   if(p.examOld){const n=$("main").querySelector('[data-k="today.exam"]');if(n)n.classList.add("old")}
-  if(p.examNotesOld)$("main").querySelector('[data-k="examNotes"]').classList.add("old");
+  if(p.examNotesOld){const n=$("main").querySelector('[data-k="examNotes"]');if(n)n.classList.add("old")}
   p.problems.forEach((pr,i)=>Object.keys(pr.old||{}).forEach(fld=>{const n=$("main").querySelector(`[data-k="problems.${i}.${fld}"]`);if(n)n.classList.add("old")}));
   if(keepOpen)$("main").querySelectorAll("details").forEach(d=>{const k=dkey(d);if(keepOpen.has(k))d.open=keepOpen.get(k)});
-  if(isM(p)){SYS.forEach(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).forEach(fl=>{const n=$("main").querySelector(`[data-k="sys.${k}.${fl}"]`);if(n)n.classList.add("old")}))}
+  {SYS.forEach(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).forEach(fl=>{const n=$("main").querySelector(`[data-k="sys.${k}.${fl}"]`);if(n)n.classList.add("old")}))}
   $("main").querySelectorAll("textarea").forEach(grow);
   $("main").querySelectorAll("textarea[data-k],input[type=text][data-k]").forEach(deidCheck);
 }
@@ -907,9 +1041,9 @@ $("main").addEventListener("input",e=>{
   if(t.classList.contains("old"))unGray(k,t);
   if(t.dataset.num){const [o,a]=t.dataset.num.split("."),fl=flagOf(o,a,t.value),c=t.closest(".lc");
     if(c&&!c.classList.contains("bp")){c.classList.remove("lo","hi");if(fl)c.classList.add(fl)}else{t.classList.remove("lo","hi");if(fl)t.classList.add(fl)}
-    $("main").querySelectorAll(`[data-tr="${o}.${a}"]`).forEach(s=>s.innerHTML=trendOf(P(),o,a));
+    if(k.startsWith("today."))$("main").querySelectorAll(`[data-tr="${o}.${a}"]`).forEach(s=>s.innerHTML=trendOf(P(),o,a)+admOf(P(),o,a));
     if(o==="ios"){const w=k.split(".")[0],n=$("main").querySelector(`[data-ionet="${w}"]`);if(n)n.innerHTML=fmtNet(ioNet(P()[w].ios))}}
-  if(/^today\.ex\./.test(k))exFresh();
+  {const m=k.match(/^today\.ex\.(\w+)\./);if(m)exFresh(m[1])}
   if(/^todos\.\d+\.(done|t)$/.test(k)){const r=t.closest(".todo");if(r&&t.type==="checkbox")r.classList.toggle("done",t.checked);updateCounts()}
   if(t.type==="checkbox"){const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts()}
   if(k==="story")storyFresh(P(),t);
@@ -919,7 +1053,8 @@ $("main").addEventListener("input",e=>{
   save();
 });
 $("main").addEventListener("change",e=>{if(e.target.tagName==="SELECT"&&e.target.dataset.k){const t=e.target;setPath(P(),t.dataset.k,t.value);markTs(t.dataset.k);icuChangeHook(t,t.dataset.k);
-    const rw=t.closest(".rw");if(rw&&/^cx\.\d+\.st$/.test(t.dataset.k))rw.classList.toggle("pos",t.value==="Positive");save();return}
+    const rw=t.closest(".rw");if(rw&&/^cx\.\d+\.st$/.test(t.dataset.k))rw.classList.toggle("pos",t.value==="Positive");
+    if(/^img\.\d+\.mod$/.test(t.dataset.k)){const y=scrollY;render();scrollTo(0,y)}save();return}
   if(e.target.type==="date"&&e.target.dataset.k&&isM(P())){const y=scrollY;render();scrollTo(0,y);return}
   if(e.target.type==="checkbox"){/* handled on input; Safari fires change only */const t=e.target;if(!t.dataset.k)return;setPath(P(),t.dataset.k,t.checked);markTs(t.dataset.k);const row=t.closest(".chk");if(row)row.classList.toggle("done",t.checked);updateCounts();save()}});
 function updateCounts(){
@@ -933,10 +1068,21 @@ document.addEventListener("click",e=>{
   const rerender=()=>{const y=scrollY;render();scrollTo(0,y);save()};
   if(a.startsWith("icu")){icuAct(a,b,p,i);return}
   switch(a){
-    case"tab":cur=b.dataset.id;listOn=false;afterOn=false;render();scrollTo(0,0);flashId();break;
-    case"open":cur=b.dataset.id;listOn=false;afterOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
+    case"tab":hideToast();cur=b.dataset.id;listOn=false;afterOn=false;render();scrollTo(0,0);flashId();break;
+    case"open":hideToast();cur=b.dataset.id;listOn=false;afterOn=false;mode="edit";render();scrollTo(0,0);flashId();break;
     case"list":listOn=true;afterOn=false;render();scrollTo(0,0);break;
-    case"present":mode=mode==="present"?"edit":"present";render();scrollTo(0,0);break;
+    case"present":hideToast();mode=mode==="present"?"edit":"present";render();scrollTo(0,0);break;
+    case"mornApOK":p.onelinerOld=false;p.problems.forEach(pr=>pr.old={});Object.keys(p.sys||{}).forEach(k=>{p.sys[k].old={};markTs("sys."+k+".old")});markTs("problems");markTs("onelinerOld");rerender();break;
+    case"mornPresent":hideToast();mode="present";render();scrollTo(0,0);break;
+    case"morning":hideToast();mode=mode==="morning"?"edit":"morning";render();scrollTo(0,0);break;
+    case"admToggle":{p.admDay=b.dataset.v==="1"?(p.today.date||today()):"";markTs("admDay");rerender();break}
+    case"admSave":{if(p.adm&&(anyIn(p.adm.lab,STRUCT.labs[1])||anyIn(p.adm.vit,VITK))&&!confirm("Admission values already saved. Fill only the blanks from today's labs & vitals?"))break;
+      const n=captureAdm(p);rerender();toast(n?`Saved ${n} value${n>1?"s":""} as admission values.`:"Nothing new to save — enter today's labs / vitals first.");break}
+    case"labLine":{const inp=$("labLine"),{out,bad}=parseLabs(inp.value||"");const ks=Object.keys(out);if(!ks.length){toast("Didn't find any labs — try e.g. Na 136 K 4.9 Cr 2.3");break}
+      p.today.lab=p.today.lab||{};const chg=ks.filter(k=>filled(p.today.lab[k])&&p.today.lab[k]!==out[k]);
+      if(chg.length&&!confirm("Replace today's "+chg.map(k=>AN[k][1]).join(", ")+"?"))break;
+      ks.forEach(k=>{p.today.lab[k]=out[k];markTs("today.lab."+k)});inp.value="";rerender();
+      toast(`Filled ${ks.length}: ${ks.map(k=>AN[k][1]).join(", ")}${bad.length?` · didn't recognize: ${bad.join(", ")}`:""}`);break}
     case"todoChk":{const pt=S.patients.find(x=>x.id===b.dataset.pid);if(!pt)break;const td=pt.todos[i];td.done=b.checked;markTs("todos",pt);pt.updated=Date.now();
       b.closest(".chk").classList.toggle("done",b.checked);if(S.sync)S.sync.dirty=true;clearTimeout(saveT);saveT=setTimeout(saveNow,400);schedulePush();renderTabs();if(afterOn){const y=scrollY;render();scrollTo(0,y)}break}
     case"addTodo":p.todos=p.todos||[];p.todos.push({t:"",done:false});markTs("todos");rerender();{const n=$("main").querySelectorAll('.todo input[type=text]');n.length&&n[n.length-1].focus({preventScroll:true})}break;
@@ -946,10 +1092,11 @@ document.addEventListener("click",e=>{
       if(!src&&!srcN&&!srcX){toast("No exam from yesterday to copy.");break}
       if((String(p.today.exam||"").trim()||String(p.examNotes||"").trim()||exHas(p.today.ex))&&!confirm("Replace today's exam with yesterday's?"))break;
       p.today.exam=p.prior.exam||"";p.examNotes=(p.priorExam||{}).notes||"";p.today.ex=clone(p.prior.ex||{});
-      p.examOld=!!(src||srcX);p.examNotesOld=!!srcN;p.examFrom=p.prior.exDate||(p.prior.dates||{}).exam||(p.priorExam||{}).date||"";
-      ["today.exam","examNotes","examOld","examNotesOld","examFrom"].forEach(k=>markTs(k));markAll(p,"today.ex",p.today.ex);
-      rerender();toast("Copied yesterday's exam — gray until you re-examine and edit it.");break}
-    case"addPt":{const n=newPatient();S.patients.push(n);cur=n.id;listOn=false;mode="edit";render();scrollTo(0,0);save();{const f=document.querySelector('[data-k="name"]');f&&f.focus({preventScroll:true})}break}
+      p.examOld=!!src;p.examNotesOld=!!srcN;p.examFrom=p.prior.exDate||(p.prior.dates||{}).exam||(p.priorExam||{}).date||"";
+      p.exOld=Object.fromEntries(Object.keys(p.today.ex).filter(k=>{const e=p.today.ex[k];return e&&(e.s||filled(e.t))}).map(k=>[k,1]));
+      ["today.exam","examNotes","examOld","examNotesOld","examFrom","exOld"].forEach(k=>markTs(k));markAll(p,"today.ex",p.today.ex);
+      rerender();toast("Copied yesterday's exam — each system stays gray until you re-examine it (tap WNL / Abnl or ✓).");break}
+    case"addPt":{const n=newPatient();n.admDay=today();S.patients.push(n);cur=n.id;listOn=false;mode="edit";render();scrollTo(0,0);save();{const f=document.querySelector('[data-k="name"]');f&&f.focus({preventScroll:true})}break}
     case"delPt":if(confirm("Remove "+(p.name||"this patient")+" and all their notes?")){S.deleted=S.deleted||{};S.deleted[cur]=Date.now();S.patients=S.patients.filter(x=>x.id!==cur);cur=S.patients[0]?.id||null;render();save()}break;
     case"tri":{const s=((p.examChk[b.dataset.key]||0)+1)%3;p.examChk[b.dataset.key]=s;markTs("examChk."+b.dataset.key);b.dataset.s=s;b.querySelector(".dot").textContent=s===1?"✓":s===2?"!":"";updateCounts();save();break}
     case"addVerify":markTs("today.verify");p.today.verify.push({t:"",done:false});rerender();break;
@@ -965,15 +1112,21 @@ document.addEventListener("click",e=>{
     case"mv":{const k=b.dataset.f,l=VALUES.find(v=>v[0]===k)[1];if(moveValues(p,[k]).length){rerender();toast(l+" moved to Prior.",true)}else toast("Today's "+l+" is empty — nothing to move.");break}
     case"mvAll":{const m=moveValues(p,VALUES.map(([k])=>k));if(m.length){rerender();toast(m.length+" field"+(m.length>1?"s":"")+" moved to Prior.",true)}else toast("Today's values are empty — nothing to move.");break}
     case"undo":undoMove();break;
-    case"storyOk":storyFresh(p);save();break;
+    case"storyOk":storyFresh(p);save();if(mode==="morning")rerender();break;
     case"jump":{const el=$(b.dataset.to);if(!el)break;const d=el.closest("details");if(d)d.open=true;el.scrollIntoView({behavior:"smooth",block:"start"});break}
     case"pick":{const k=b.dataset.k,v=b.dataset.v,curV=getPath(p,k);setPath(p,k,curV===v?"":v);markTs(k);if(isM(p))icuFresh(p,k);rerender();break}
-    case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(true);rerender();break}
-    case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(true);
+    case"exS":{const k=b.dataset.sys,v=+b.dataset.v;p.today.ex=p.today.ex||{};const e=p.today.ex[k]=p.today.ex[k]||{};
+      // tapping the already-selected choice on a copied system confirms it rather than clearing it
+      if(!((p.exOld||{})[k]&&e.s===v))e.s=e.s===v?0:v;markTs("today.ex."+k);exFresh(k);rerender();break}
+    case"exF":{const e=p.today.ex[b.dataset.sys];e.f=e.f||[];const c=b.dataset.c,j=e.f.indexOf(c);if(j>=0)e.f.splice(j,1);else e.f.push(c);markTs("today.ex."+b.dataset.sys);exFresh(b.dataset.sys);
       b.classList.toggle("on",j<0);save();break}
-    case"exAll":p.today.ex=p.today.ex||{};EXSYS.forEach(([k])=>{const e=p.today.ex[k]=p.today.ex[k]||{};if(!e.s)e.s=1;markTs("today.ex."+k)});exFresh(true);rerender();break;
-    case"exClear":if(exHas(p.today.ex)&&!confirm("Clear today's exam boxes?"))break;p.today.ex={};EXSYS.forEach(([k])=>markTs("today.ex."+k));exFresh(true);rerender();break;
-    case"addRow":{const kd=b.dataset.kind;p[kd]=p[kd]||[];p[kd].push(kd==="cons"?{svc:"",st:"",recs:""}:{date:today(),st:kd==="cx"?"Pending":""});markTs(kd);rerender();break}
+    case"exKeep":exFresh(b.dataset.sys);rerender();break;
+    case"exKeepAll":p.exOld={};markTs("exOld");rerender();break;
+    case"exAll":{p.today.ex=p.today.ex||{};let left=0;EXSYS.forEach(([k])=>{if(k==="lines"){return}const e=p.today.ex[k]=p.today.ex[k]||{};if(!e.s){e.s=1;markTs("today.ex."+k)}
+        if((p.exOld||{})[k]){if(e.s===1)delete p.exOld[k];else left++}});markTs("exOld");rerender();
+      if(left)toast(left+" copied abnormal system"+(left>1?"s":"")+" left gray — re-examine and confirm.");break}
+    case"exClear":if(exHas(p.today.ex)&&!confirm("Clear today's exam boxes?"))break;p.today.ex={};p.exOld={};markTs("exOld");EXSYS.forEach(([k])=>markTs("today.ex."+k));rerender();break;
+    case"addRow":{const kd=b.dataset.kind;p[kd]=p[kd]||[];p[kd].push(kd==="cons"?{svc:"",st:"",recs:""}:kd==="cx"?{date:"",st:"Pending"}:{date:today(),st:""});markTs(kd);rerender();break}
     case"delRow":{const kd=b.dataset.kind,r=p[kd][i];const lbl=kd==="cx"?cxText(r):kd==="img"?imgText(r):consText(r);if(!confirm("Remove "+lbl+"?"))break;p[kd].splice(i,1);markTs(kd);rerender();break}
     case"apKeep":p.problems[i].old={};markTs("problems");rerender();break;
     case"apKeepAll":p.onelinerOld=false;p.problems.forEach(pr=>pr.old={});markTs("problems");markTs("onelinerOld");rerender();break;
@@ -999,10 +1152,10 @@ function apBanner(p){
   if(!any)return"";
   return `<div class="oldbar">Gray = carried over from ${esc(mmdd(p.apFrom)||"yesterday")}. Edit a field to make it current, or tap ✓ if it's unchanged. <button data-act="apKeepAll">Mark all current</button></div>`;
 }
-function exFresh(skipRender){
-  const p=P();if(!p.examOld)return;p.examOld=false;markTs("examOld");
-  const bx=$("exBox");if(bx){bx.classList.remove("old");const ob=bx.querySelector(".oldbar");if(ob)ob.remove()}
-  const n=$("main").querySelector('[data-k="today.exam"]');if(n)n.classList.remove("old");
+function exFresh(k){
+  const p=P();if(!k||!(p.exOld||{})[k])return;delete p.exOld[k];markTs("exOld");
+  const r=$("main").querySelector(`.exr[data-exsys="${k}"]`);if(r){r.classList.remove("old");const kb=r.querySelector('[data-act="exKeep"]');if(kb)kb.remove()}
+  if(!Object.keys(p.exOld).length){const ob=$("exBox")&&$("exBox").querySelector(".oldbar");if(ob)ob.remove()}
 }
 function unGray(k,el){
   const p=P();el.classList.remove("old");
@@ -1040,7 +1193,10 @@ function rollover(p){
   if(filled(p.today.dec)){p.prior.dec=p.today.dec;p.prior.decDate=p.today.date||today()}
   p.priorExam={notes:p.examNotes||"",date:p.today.date||today()};
   p.todos=(p.todos||[]).filter(x=>x.t.trim()&&!x.done);
-  p.examOld=false;p.examNotesOld=false;
+  p.examOld=false;p.examNotesOld=false;p.exOld={};
+  // R1/R4: on an admission day, today's labs & vitals become the admission values (unless already saved)
+  if(p.admDay&&p.admDay===(p.today.date||today()))captureAdm(p,false);
+  p.admDay="";
   const t=p.today;moveValues(p,VALUES.map(([k])=>k),false);
   p.today=Object.assign({date:today(),lab:{},vit:{},ios:{},ex:{},icu:{},verify:t.verify.filter(v=>v.t.trim()).map(v=>({t:v.t,done:false}))},blankVals());
   if(!p.today.verify.length)p.today.verify.push({t:"",done:false});

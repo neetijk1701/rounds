@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'none'; script-src 'sha256-GK45n4EYK8nekW6cd7GV3yDMWNby1VpisIWimfG/F4A=' 'sha256-Qf2tPgizpdGBrsJp7SIrCd8AAma+wxEl4akYgkwJHh4=' 'sha256-T07/LB+nIGFSm/NKWvwX6g23SWlc90n2ypaCzzC+HLk='; style-src 'unsafe-inline'; img-src data: 'self' blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'sha256-GK45n4EYK8nekW6cd7GV3yDMWNby1VpisIWimfG/F4A=' 'sha256-Qf2tPgizpdGBrsJp7SIrCd8AAma+wxEl4akYgkwJHh4=' 'sha256-wYaC9glQF/37qctvqTHE/ty0CWPMkBd+t28N/V23H/g='; style-src 'unsafe-inline'; img-src data: 'self' blob:; media-src 'self' blob: mediastream:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
   Cache-Control: no-cache

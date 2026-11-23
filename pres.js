@@ -4,9 +4,9 @@
    Attending profiles live in S.prefs and sync with the patients. */
 
 /* ---------- attending profiles ---------- */
-const PSECS=[["tldr","TL;DR"],["oneliner","One-liner & ICU diagnosis"],["days","Hospital / ICU day"],["events","Overnight events"],
+const PSECS=[["tldr","TL;DR"],["oneliner","One-liner & ICU diagnosis"],["hpi","HPI (new admission)"],["bg","PMH · meds · allergies · social (new admission)"],["days","Hospital / ICU day"],["events","Overnight events"],
  ["traj","Trajectory & why ICU"],["hemo","Vitals & hemodynamics"],["press","Pressors / inotropes"],["resp","Respiratory / ventilator"],
- ["neuro","Neuro / sedation"],["io","I/O, urine output & renal"],["exam","Exam"],["labs","Lab trends"],["micro","Micro, antibiotics & imaging"],
+ ["neuro","Neuro / sedation"],["io","I/O, urine output & renal"],["gi","GI, nutrition & glucose"],["exam","Exam"],["labs","Lab trends"],["micro","Micro, antibiotics & imaging"],
  ["ap","Assessment & plan"],["goals","Today's goals"],["devices","Lines / tubes / drains"],["checklist","ICU checklist"],["dispo","Disposition & barriers"],["todos","To-do"]];
 const PSEC_L=Object.fromEntries(PSECS);
 const DEF_PROFILE=()=>({id:"default",name:"Default",fmt:"auto",ap:"int",vent:"std",order:PSECS.map(x=>x[0]),hide:[],sys:SYS.map(x=>x[0])});
@@ -14,7 +14,7 @@ function profiles(){const l=(S.prefs&&S.prefs.profiles)||[];return l.length?l:[D
 function curProfile(){
   const l=profiles(),pr=clone(l.find(x=>x.id===(S.prefs||{}).cur)||l[0]);
   // keep old saved profiles compatible as sections/systems are added
-  PSECS.forEach(([k])=>{if(!pr.order.includes(k))pr.order.push(k)});SYS.forEach(([k])=>{if(!pr.sys.includes(k))pr.sys.push(k)});
+  PSECS.forEach(([k],j)=>{if(pr.order.includes(k))return;const before=PSECS.slice(0,j).map(x=>x[0]).reverse().find(x=>pr.order.includes(x));pr.order.splice(before?pr.order.indexOf(before)+1:0,0,k)});SYS.forEach(([k])=>{if(!pr.sys.includes(k))pr.sys.push(k)});
   return pr;
 }
 function savePrefs(mut){
@@ -109,8 +109,81 @@ function preCheck(p){
   const stale=[p.storyOld&&filled(p.story)&&"TL;DR",p.onelinerOld&&"one-liner",(p.problems.some(x=>x.old&&Object.keys(x.old).length)||SYS.some(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).length))&&"A&P"].filter(Boolean);
   if(stale.length)out.push(`Still from yesterday: ${stale.join(", ")}`);
   if(!hasLabs(p,"today")&&!filled(T.labs))out.push("No labs entered today");
+  const nOld=Object.keys(p.exOld||{}).length;if(nOld)out.push(`Exam: ${nOld} copied system${nOld>1?"s":""} not re-examined`);
+  const un=HCHK.filter(([k])=>!(ic.chk||{})[k]).length;if(un&&un<HCHK.length)out.push(`MICU Checklist: ${un} unanswered`);else if(un)out.push("MICU Checklist not done");
+  if(isNewAdm(p)&&!filled(p.hpi))out.push("New admission: HPI not entered");
   return out;
 }
+
+/* ---------- R8: "target → how it's being achieved" lead lines ----------
+   Built only from entered data; never invents a goal ("goal not set"), and says when a value is outside it. */
+const lc=s=>s&&/^[A-Z][a-z]/.test(s)?s.charAt(0).toLowerCase()+s.slice(1):s;
+const fmtGoal=g=>{g=String(g||"").trim();return /^\d/.test(g)&&!/[-–]/.test(g)?"≥"+g:g};
+function dripShort(r,pr,cat){
+  const nm=cat===PRESS?(PRESS_AB[r.drug]||dripName(r)):lc(dripName(r));
+  const u=filled(r.unit)&&r.unit!==cat[r.drug]?" "+r.unit:"";
+  let t=`${nm} ${filled(r.cur)?r.cur:"(dose?)"}${u}`;
+  if(pr&&filled(pr.cur)&&filled(r.cur)){const a=num(r.cur),b=num(pr.cur);if(!isNaN(a)&&!isNaN(b)&&a!==b)t+=` (${a<b?"down":"up"} from ${pr.cur})`}
+  return t;
+}
+function dripsShort(p,kind){
+  const l=(getPath(p,`today.icu.${kind}`)||[]).filter(r=>r.drug),pr=getPath(p,`prior.icu.${kind}`)||[],cat=kind==="h.press"?PRESS:SED;
+  return l.map(r=>dripShort(r,pr.find(x=>dripName(x)===dripName(r)),cat)).join(" + ");
+}
+function hemoLead(p){
+  const h=ic0(p).h||{},m=mapCalc(p),low=gnum(h.mapLow,20,200,"MAP"),cur=m&&!m.bad?m.v:null,lo=ok(low)?low.v:null;
+  const pr=dripsShort(p,"h.press"),sup=pr?"on "+pr:h.pressNone?"off pressors":"";
+  if(cur==null&&lo==null)return sup?`MAP not entered, ${sup}`:"";
+  const vs=[cur,lo].filter(x=>x!=null),mn=Math.min(...vs),mx=Math.max(...vs),rng=mn===mx?""+mn:`${mn}–${mx}`;
+  const g=fmtGoal(h.mapGoal),gn=num(h.mapGoal);
+  let st;if(!g)st="MAP goal not set";else if(isNaN(gn))st=`goal ${g}`;else if(cur!=null&&cur<gn)st=`below goal ${g}`;else if(mn<gn)st=`below goal ${g} at times`;else st=`at goal ${g}`;
+  return `MAP ${rng}${lo!=null&&cur!=null&&lo<cur?" (lowest overnight "+lo+")":""}${m&&m.calc?" (calc from cuff)":""} — ${st}${sup?", "+sup:""}`;
+}
+function respLead(p,prof){
+  const r=ic0(p).r||{},pr=pi0(p).r||{},v=(p.today||{}).vit||{};if(!r.sup&&!filled(v.spo2))return"";
+  let sup="";
+  if(r.sup==="RA")sup="room air";
+  else if(isVent(r))sup=[(r.sup==="Trach vent"?"trach vent ":"")+(r.vmode||"vent"),pct(r.fio2)&&"FiO₂ "+pct(r.fio2),filled(r.vpeep)&&"PEEP "+r.vpeep].filter(Boolean).join(", ");
+  else if(r.sup)sup=lc(ventReport(p,prof.vent).line.split(" — ")[0]);
+  const ch=[];
+  if(pr.sup&&r.sup&&pr.sup!==r.sup)ch.push(`from ${pr.sup==="RA"?"room air":pr.sup} yesterday`);
+  else{const a=fio2f(r.fio2),b=fio2f(pr.fio2);if(!isNaN(a)&&!isNaN(b)&&a!==b)ch.push(`FiO₂ ${a<b?"down":"up"} from ${Math.round(b*100)}%`);
+    const pa=num(r.vpeep),pb=num(pr.vpeep);if(isVent(r)&&!isNaN(pa)&&!isNaN(pb)&&pa!==pb)ch.push(`PEEP ${pa<pb?"down":"up"} from ${pb}`);
+    const fa=num(r.flow),fb=num(pr.flow);if(!isVent(r)&&!isNaN(fa)&&!isNaN(fb)&&fa!==fb)ch.push(`flow ${fa<fb?"down":"up"} from ${fb} L`)}
+  const t=String(r.spo2t||"").replace(/%/g,"").trim(),tl=num(t),sp=num(v.spo2);
+  let tgt=t?` (target ${t}%${!isNaN(tl)&&!isNaN(sp)&&sp<tl?", below target":""})`:" (SpO₂ target not set)";
+  return `${filled(v.spo2)?`SpO₂ ${v.spo2}%`+tgt:"SpO₂ not entered"}${sup?" on "+sup:""}${ch.length?" — "+ch.join(", "):""}`;
+}
+function neuroLead(p){
+  const n=ic0(p).n||{},sd=dripsShort(p,"n.sed"),sup=sd?"on "+sd:n.sedNone?"off sedation":"";
+  if(!filled(n.rass)&&!sup)return"";
+  const rn=num(String(n.rass||"").replace("−","-")),tg=String(n.rassT||""),tv=(tg.replace(/−/g,"-").match(/[+-]?\d+/g)||[]).map(Number);
+  let st="";
+  if(filled(n.rass)&&!isNaN(rn)&&tv.length&&tg!=="n/a"){const lo=Math.min(...tv),hi=Math.max(...tv);st=rn<lo?`, deeper than target (${tg})`:rn>hi?`, lighter than target (${tg})`:`, at target (${tg})`}
+  else if(filled(n.rass)&&!isNaN(rn))st=", RASS target not set";
+  return `${filled(n.rass)?"RASS "+n.rass+st:"RASS not entered"}${sup?", "+sup:""}`;
+}
+const fmtVol=ml=>Math.abs(ml)>=1000?`${ml>0?"+":"−"}${(Math.abs(ml)/1000).toFixed(1)} L`:`${ml>0?"+":ml<0?"−":""}${Math.abs(ml)} mL`;
+function fluidLead(p){
+  const rn=ic0(p).rn||{},r=ioNet((p.today||{}).ios),u=uopCalc(p),bits=[];
+  if(r&&r.net!==null)bits.push(`Net ${fmtVol(r.net)}${filled(rn.netGoal)?` (goal ${rn.netGoal})`:" (net goal not set)"}`);
+  else if(filled(rn.netGoal))bits.push(`Net goal ${rn.netGoal}`);
+  const how=[rn.rrt==="CRRT"?`CRRT${filled(rn.uf)?" UF "+rn.uf+" mL/h":""}`:rn.rrt&&rn.rrt!=="None"?rn.rrt:"",filled(rn.diur)?rn.diur:""].filter(Boolean);
+  if(bits.length&&how.length)bits[0]+=" with "+how.join(" + ");else if(how.length)bits.push("On "+how.join(" + "));
+  if(u&&u.v)bits.push(`UOP ${u.v} mL/kg/h`);
+  return bits.join("; ");
+}
+function gluLead(p){
+  const g=ic0(p).gi||{};if(!filled(g.glu)&&!filled(g.ins))return"";
+  return `${filled(g.glu)?"BG "+g.glu:"BG not entered"}${filled(g.gluT)?` (goal ${g.gluT})`:""}${filled(g.ins)?" on "+lc(g.ins):""}${g.hypo==="Yes"?" — hypoglycemia overnight":""}`;
+}
+function idLead(p){
+  const v=(p.today||{}).vit||{},ab=(p.abx||[]).filter(a=>a.name).map(a=>`${a.name}${hday(a.start)?" day "+hday(a.start):""}`),t=num(v.tmax);
+  if(isNaN(t)&&!ab.length)return"";
+  const fev=isNaN(t)?"":(t<50?t>=38:t>=100.4)?`Febrile, Tmax ${v.tmax}`:`Afebrile (Tmax ${v.tmax})`;
+  return `${fev||"Tmax not entered"}${ab.length?" on "+ab.join(", "):", no antimicrobials"}`;
+}
+const lead=t=>t?`<p class="lead">${esc(t)}</p>`:"";
 
 /* ---------- A&P from the same data in either format ---------- */
 function apItems(p,prof){
@@ -156,46 +229,50 @@ function presSections(p,prof0,brief){
   const m=mapCalc(p),u=uopCalc(p),vr=ventReport(p,prof.vent),hd=hday(icu.hAdm),idd=hday(icu.iAdm);
   const S_={
     tldr:()=>filled(p.story)?`<div class="${p.storyOld?"oldtxt":""}">${esc(p.story).replace(/\n/g,"<br>")}</div>${p.storyOld?stale(""):""}`:"",
+    hpi:()=>isNewAdm(p)?txt(p.hpi):"",
+    bg:()=>isNewAdm(p)?BACKGROUND.filter(([k])=>filled(p[k])).map(([k,l])=>`<div><b>${esc(l)}:</b> ${esc(p[k]).replace(/\n/g,"<br>")}</div>`).join(""):"",
     oneliner:()=>(filled(p.oneliner)?`<div class="${p.onelinerOld?"oldtxt":""}">${txt(p.oneliner)}</div>${p.onelinerOld?stale(p.apFrom):""}`:"")+(filled(icu.dx)?`<p><b>ICU diagnosis:</b> ${esc(icu.dx)}${filled(icu.comorb)&&!brief?" · "+esc(icu.comorb):""}</p>`:""),
     days:()=>j([hd&&`Hospital day ${hd}`,idd&&`ICU day ${idd}`])||(brief?"":miss("Admit dates not entered")),
     events:()=>{const e=(ic.ev||[]).filter(x=>filled(x.what)||filled(x.type));return (e.length?`<ul>${e.map(x=>`<li>${esc(evTxt(x))}</li>`).join("")}</ul>`:"")+txt(p.on)||(brief?"":"No overnight events entered")},
     traj:()=>(st.traj?`<p><b>${esc(st.traj)}</b>${filled(st.trajT)?" — "+esc(st.trajT):""}</p>`:"")+((st.why||[]).length||filled(st.whyT)?`<p>In the ICU for: ${esc(j([(st.why||[]).join(", "),st.whyT]))}</p>`:""),
-    hemo:()=>j([filled(v.tmax)&&`Tmax ${esc(v.tmax)}`,filled(h.hrR)?`HR ${esc(h.hrR)}`:filled(v.hr)&&`HR ${esc(v.hr)}`,filled(h.bpR)?`BP ${esc(h.bpR)}`:"",
+    hemo:()=>lead(hemoLead(p))+(brief?"":j([filled(v.tmax)&&`Tmax ${esc(v.tmax)}`,filled(h.hrR)?`HR ${esc(h.hrR)}`:filled(v.hr)&&`HR ${esc(v.hr)}`,filled(h.bpR)?`BP ${esc(h.bpR)}`:"",
       m&&!m.bad&&`MAP ${m.v}${m.calc?" (calc from cuff)":""}`,filled(h.mapGoal)&&`goal ${esc(h.mapGoal)}`,filled(h.mapLow)&&`lowest overnight ${esc(h.mapLow)}`])
       +(!brief?(j([h.cr&&"cap refill "+esc(h.cr),h.ext&&esc(h.ext.toLowerCase())+" extremities",h.mot&&"mottling "+esc(h.mot.toLowerCase())])?`<p>Perfusion: ${j([h.cr&&"cap refill "+esc(h.cr),h.ext&&esc(h.ext.toLowerCase())+" extremities",h.mot&&"mottling "+esc(h.mot.toLowerCase())])}</p>`:""):"")
-      +(filled((T.lab||{}).lac)?`<p>Lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}</p>`:""),
-    press:()=>{const l=dripsLine(p,"h.press");if(l)return esc(l);if(h.pressNone)return "None";const y=dripsLine(p,"h.press","prior");return miss(y?`Not documented today (yesterday: ${esc(y)})`:"Not documented")},
+      +(filled((T.lab||{}).lac)?`<p>Lactate ${esc(T.lab.lac)} ${trendOf(p,"lab","lac")}${admOf(p,"lab","lac")}</p>`:"")),
+    press:()=>{if(brief)return"";const l=dripsLine(p,"h.press");if(l)return esc(l);if(h.pressNone)return "None";const y=dripsLine(p,"h.press","prior");return miss(y?`Not documented today (yesterday: ${esc(y)})`:"Not documented")},
     resp:()=>{if(!vr.line&&!vr.miss.length)return"";
       const abg=(ic.abg||[]).filter(g=>filled(g.ph)),last=abg[abg.length-1];
       const pf=last?abgInterp(last).find(x=>/^P\/F \d/.test(x)):null;
-      return `<p>${esc(vr.line)||miss("Support not entered")}${filled(v.spo2)?` · SpO₂ ${esc(v.spo2)}%`:""}</p>`
+      return lead(respLead(p,prof))+(brief&&!vr.vent?"":`<p>${esc(vr.line)||miss("Support not entered")}</p>`)
         +(vr.meas&&(!brief||vr.vent)?`<p>${esc(vr.meas)}${vr.calcs&&vr.calcs.length?" · "+esc(vr.calcs.join(", ")):""}</p>`:"")
         +(last?`<p>${esc(abgTxt(last))}${pf?" · "+esc(pf.split(" (")[0]):""}</p>`:"")
         +(j([r.sbt&&"SBT: "+esc(r.sbt.toLowerCase()),r.extub&&"extubation: "+esc(r.extub.toLowerCase())])?`<p>${j([r.sbt&&"SBT: "+esc(r.sbt.toLowerCase()),r.extub&&"extubation: "+esc(r.extub.toLowerCase())])}</p>`:"")
         +(vr.miss.length?`<p>${miss("Missing: "+esc(vr.miss.join(", ")))}</p>`:"")},
     neuro:()=>{const sed=dripsLine(p,"n.sed");
-      return j([n.ms&&esc(n.ms),filled(n.rass)&&`RASS ${esc(n.rass)}${filled(n.rassT)?` (target ${esc(n.rassT)})`:""}`,filled(n.cam)&&`CAM-ICU ${esc(n.cam.toLowerCase())}`,!brief&&filled(n.cmd)&&`follows commands: ${esc(n.cmd.toLowerCase())}`,!brief&&filled(n.pain)&&`pain ${esc(n.pain)}`])
-        +(sed?`<p>Sedation: ${esc(sed)}</p>`:n.sedNone?`<p>Sedation: none</p>`:isVent(r)?`<p>${miss("Sedation not documented")}</p>`:"")},
-    io:()=>{const io=ioLine(p);return (io||miss("I/O not entered"))+j([u&&u.v&&`UOP ${u.v} mL/kg/h`,crRatio(p)&&esc(crRatio(p)),filled(rn.cum)&&`cumulative ${esc(rn.cum)}`,!brief&&filled(rn.diur)&&esc(rn.diur),rn.rrt&&rn.rrt!=="None"&&esc(rn.rrt)+(rn.rrt==="CRRT"&&filled(rn.uf)?` UF ${esc(rn.uf)} mL/h`:"")])},
-    exam:()=>{const e=exLines(T.ex);return (p.examOld&&e.length?` <span class="stale">copied — re-examine</span>`:"")+e.map(x=>`<div class="${x.ab?"abn":""}"><b>${esc(x.l)}:</b> ${esc(x.t)}</div>`).join("")+txt(T.exam)||(brief?"":miss("No exam entered"))},
+      return lead(neuroLead(p))+(brief?(!sed&&!n.sedNone&&isVent(r)?`<p>${miss("Sedation not documented")}</p>`:""):j([n.ms&&esc(n.ms),filled(n.rass)&&`RASS ${esc(n.rass)}${filled(n.rassT)?` (target ${esc(n.rassT)})`:""}`,filled(n.cam)&&`CAM-ICU ${esc(n.cam.toLowerCase())}`,!brief&&filled(n.cmd)&&`follows commands: ${esc(n.cmd.toLowerCase())}`,!brief&&filled(n.pain)&&`pain ${esc(n.pain)}`])
+        +(sed?`<p>Sedation: ${esc(sed)}</p>`:n.sedNone?`<p>Sedation: none</p>`:isVent(r)?`<p>${miss("Sedation not documented")}</p>`:""))},
+    io:()=>{const io=ioLine(p);return lead(fluidLead(p))+(brief?(io?"":miss("I/O not entered")):(io||miss("I/O not entered"))+j([u&&u.v&&`UOP ${u.v} mL/kg/h`,crRatio(p)&&esc(crRatio(p)),filled(rn.cum)&&`cumulative ${esc(rn.cum)}`,!brief&&filled(rn.diur)&&esc(rn.diur),rn.rrt&&rn.rrt!=="None"&&esc(rn.rrt)+(rn.rrt==="CRRT"&&filled(rn.uf)?` UF ${esc(rn.uf)} mL/h`:"")]))},
+    gi:()=>{const g=ic.gi||{},nut=g.diet?(g.diet==="Tube feeds"?`Tube feeds${filled(g.tf)?" ("+esc(g.tf)+")":""}${filled(g.tfr)?" "+esc(g.tfr):""}${g.tol?", "+esc(g.tol.toLowerCase()):""}`:esc(g.diet)):"";
+      return lead(gluLead(p))+(nut?`<p>Nutrition: ${nut}</p>`:"")+(brief?"":j([filled(g.lbm)&&"last BM "+esc(mmdd(g.lbm)||g.lbm),filled(g.bowel)&&"bowel: "+esc(g.bowel),filled(g.sup)&&"SUP: "+esc(g.sup),filled(g.ster)&&"steroids: "+esc(g.ster)]))},
+    exam:()=>exSummary(p,brief)+txt(T.exam)+(p.examOld&&filled(T.exam)?`<span class="stale">copied — re-examine</span>`:"")||(brief?"":miss("No exam entered")),
     labs:()=>(hasLabs(p,"today")||filled(T.labs))?((brief?"":(hasLabs(p,"today")?fish(p,"today",true):""))+trackTable(p,true)+(brief?"":txt(T.labs))):miss("No labs entered today"),
-    micro:()=>{const ab=(p.abx||[]).filter(a=>a.name),cx=(p.cx||[]).filter(c=>!brief||c.st==="Positive"||c.st==="Pending"||c.st==="NGTD"),im=(p.img||[]).filter(x=>!brief||x.st!=="Final"||filled(x.imp));
-      return (ab.length?`<p>Antibiotics: ${ab.map(a=>esc(abxTxt(a))+(filled(a.ind)&&!brief?" for "+esc(a.ind):"")).join("; ")}</p>`:"")
+    micro:()=>{const ab0=(p.abx||[]).filter(a=>a.name),cx=(p.cx||[]).filter(c=>!brief||c.st==="Positive"||c.st==="Pending"||c.st==="NGTD"),im=(p.img||[]).filter(x=>!brief||x.st!=="Final"||filled(x.imp));
+      const ab=ab0;return lead(idLead(p))+(ab.length&&!brief?`<p>Antibiotics: ${ab.map(a=>esc(abxTxt(a))+(filled(a.ind)&&!brief?" for "+esc(a.ind):"")).join("; ")}</p>`:"")
         +(j([filled(icu.infSrc)&&"source "+esc(icu.infSrc),icu.infSC&&"source control "+esc(icu.infSC.toLowerCase())])?`<p>${j([filled(icu.infSrc)&&"source "+esc(icu.infSrc),icu.infSC&&"source control "+esc(icu.infSC.toLowerCase())])}</p>`:"")
         +cx.map(c=>`<div class="${c.st==="Positive"?"abn":""}">${esc(cxText(c))}</div>`).join("")+im.map(x=>`<div>${esc(imgText(x))}</div>`).join("")},
     ap:()=>apHtml(p,prof,brief),
     goals:()=>{const g=ic.g||{};return GOALS.filter(([k])=>filled(g[k])&&(!brief||k==="top")).map(([k,l])=>`<div><b>${esc(l)}:</b> ${esc(g[k]).replace(/\n/g,"<br>")}</div>`).join("")},
     devices:()=>devInventory(p),
-    checklist:()=>{const c=ic.chk||{},all=ICHK.flatMap(([,it])=>it),flag=all.filter(([k])=>c[k]==="N"||c[k]==="D").map(([k,l])=>`${esc(l)} — ${c[k]==="N"?"no":"deferred"}`);
-      const prev=["vte","sup","nutr","gluc","bowel","skin","mob"],yes=all.filter(([k])=>prev.includes(k)&&(c[k]==="Y"||c[k]==="NA")).map(([k,l])=>`${esc(l.replace(/ \(.*\)/,""))}${c[k]==="NA"?" n/a":" ✓"}`);
-      const n=Object.values(c).filter(Boolean).length;
-      return (flag.length?`<ul>${flag.map(f=>`<li>${f}</li>`).join("")}</ul>`:"")+(!brief&&yes.length?`<p>${yes.join(" · ")}</p>`:"")+(n?"":miss("Checklist not reviewed today"))},
+    checklist:()=>{const c=ic.chk||{},nt=ic.chkN||{},ans=HCHK.filter(([k])=>c[k]).length;
+      const flag=HCHK.filter(([k])=>c[k]==="N").map(([k,l])=>`${esc(l)} — no${filled(nt[k])?" ("+esc(nt[k])+")":""}`)
+        .concat(ICHK.flatMap(g=>g[1]).filter(([k])=>c[k]==="N"||c[k]==="D").map(([k,l])=>`${esc(l)} — ${c[k]==="N"?"no":"deferred"}`));
+      return (flag.length?`<ul>${flag.map(f=>`<li>${f}</li>`).join("")}</ul>`:"")+(ans?(!brief?`<p>${ans}/${HCHK.length} answered${flag.length?"":" — no gaps"}</p>`:""):miss("Checklist not done today"))},
     dispo:()=>{const c=ic.chk||{},g=ic.g||{},dz=(p.sys||{}).dispo||{};
       return j([c.still&&`Still needs ICU: ${({Y:"yes",N:"no",NA:"n/a",D:"deferred"})[c.still]}`,c.down&&`downgrade today: ${({Y:"possible",N:"no",NA:"n/a",D:"deferred"})[c.down]}`])
         +(filled(g.barrier)?`<p>Barriers: ${esc(g.barrier)}</p>`:"")+(prof.fmt==="sys"?"":(filled(dz.pl)?`<p>${esc(dz.pl)}</p>`:""))},
     todos:()=>{const t=(p.todos||[]).filter(x=>filled(x.t)&&!x.done);return t.length?`<ul>${t.map(x=>`<li>${esc(x.t)}${x.cat?` <span class="tsb cat">${esc(x.cat)}</span>`:""}${x.st?` <span class="tsb">${esc(x.st)}</span>`:""}</li>`).join("")}</ul>`:""}
   };
-  const secKey={hemo:"h",press:"h",resp:"r",neuro:"n",io:"rn",micro:"id",traj:"st",goals:"g"};
+  const secKey={hemo:"h",press:"h",resp:"r",neuro:"n",io:"rn",gi:"gi",micro:"id",traj:"st",goals:"g"};
   return prof.order.filter(k=>!prof.hide.includes(k)).map(k=>{
     let html="";try{html=S_[k]?S_[k]():""}catch(e){html=miss("Couldn't build this section")}
     if(!html||!String(html).replace(/<[^>]+>/g,"").trim())return"";
@@ -277,7 +354,7 @@ function renderAfter(){
     const todos=(p.todos||[]).map((t,j)=>[t,j]).filter(([t])=>filled(t.t)).sort((a,b)=>(a[0].done-b[0].done)||(catRank(a[0].cat)-catRank(b[0].cat)));
     open+=todos.filter(([t])=>!t.done).length;
     const pend=[...(p.cx||[]).filter(x=>x.st==="Pending"||x.st==="NGTD").map(x=>cxText(x)),...(p.img||[]).filter(x=>x.st==="Ordered"||x.st==="Pending read").map(x=>imgText(x)),...(p.cons||[]).filter(x=>x.st==="Requested").map(x=>consText(x))];
-    const flags=[c.family==="Y"&&"Family update needed",c.goc==="Y"&&"Goals-of-care discussion needed",p.storyOld&&filled(p.story)&&"TL;DR needs update",...(p.dev||[]).filter(d=>d.type&&d.needD===today()&&d.need==="No").map(d=>`Remove ${d.type}${filled(d.site)?" ("+d.site+")":""}`)].filter(Boolean);
+    const flags=[c.famUpd==="N"&&"Family not yet updated",c.goc==="Y"&&"Goals-of-care discussion needed",p.storyOld&&filled(p.story)&&"TL;DR needs update",...(p.dev||[]).filter(d=>d.type&&d.needD===today()&&d.need==="No").map(d=>`Remove ${d.type}${filled(d.site)?" ("+d.site+")":""}`)].filter(Boolean);
     return `<div class="card"><button class="ch" data-act="open" data-id="${p.id}"><b>${p.room?"Rm "+esc(p.room):"—"}</b><span class="nm">${esc(p.name)||"Patient"}</span><span class="pct">edit ›</span></button>
       ${filled(T.dec)?`<div class="dec"><b>Decided on rounds:</b> ${esc(T.dec).replace(/\n/g,"<br>")}</div>`:`<div class="meta">No decisions recorded — add them under Assessment &amp; plan.</div>`}
       ${flags.length?`<div>${flags.map(f=>`<span class="bdg">${esc(f)}</span>`).join("")}</div>`:""}

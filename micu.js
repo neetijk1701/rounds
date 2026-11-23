@@ -8,7 +8,7 @@ const pi0=p=>(p.prior&&p.prior.icu)||{};
 const hday=d=>(d&&/^\d{4}-\d\d-\d\d$/.test(d))?dayDiff(d,today())+1:null;
 const fio2f=v=>{const n=num(v);if(isNaN(n))return NaN;const f=n>1?n/100:n;return f>=0.21&&f<=1?f:NaN};
 
-const WHY=["Mechanical ventilation","Vasopressors","HFNC / NIV","Frequent neuro checks","CRRT","High-risk instability","Post-procedure monitoring"];
+const WHY=["Mechanical ventilation","Vasopressors","HFNC / NIV","Insulin drip (DKA/HHS)","Titratable drip (BP / rate control)","Frequent neuro checks","Frequent labs / q1–2h checks","CRRT","High-risk instability","Post-procedure monitoring"];
 const TRAJ=["Improving","Stable","Worsening","Mixed/uncertain"];
 const EVT=["Hemodynamic instability","Hypoxemia / vent change","New arrhythmia","Fever / hypothermia","Altered mental status","Seizure","Agitation / delirium","Procedure","New admission","Significant bleeding","UOP change","New lab abnormality","Rapid response / code","Other"];
 const PRESS={"Norepinephrine":"mcg/kg/min","Vasopressin":"units/min","Epinephrine":"mcg/kg/min","Phenylephrine":"mcg/min","Dopamine":"mcg/kg/min","Dobutamine":"mcg/kg/min","Milrinone":"mcg/kg/min","Angiotensin II":"ng/kg/min","Other":""};
@@ -20,24 +20,30 @@ const RASS=["+4","+3","+2","+1","0","-1","-2","-3","-4","-5","UTA"];
 const DEV=["ETT","Trach","CVC","PICC","Art line","HD catheter","PIV","Foley","Suprapubic catheter","NG tube","OG tube","Feeding tube (post-pyloric)","PEG / G-tube","Chest tube","Surgical drain","Temporary pacing wire","MCS (IABP / Impella / ECMO)","Other","NG/OG","Feeding tube"];
 const DEV_DET={"ETT":"size, depth (7.5 @ 23 cm at lip)","Trach":"size / type, cuff","CVC":"lumens (triple-lumen)","PICC":"lumens","Art line":"waveform OK?","HD catheter":"last used","PIV":"gauge","Foley":"output, hematuria","Chest tube":"suction vs water seal, output, air leak","Surgical drain":"output / character","Temporary pacing wire":"rate, output, capture","MCS (IABP / Impella / ECMO)":"device, settings","NG tube":"to suction / feeds","OG tube":"to suction / feeds","PEG / G-tube":"feeds / venting"};
 const SYS=[["neuro","Neuro / pain / sedation"],["pulm","Pulmonary / airway / ventilation"],["cv","Cardiovascular / hemodynamics"],["renal","Renal / fluids / lytes / acid–base"],["id","Infectious disease"],["gi","GI / nutrition"],["heme","Hematology"],["endo","Endocrine"],["lines","Lines / tubes / prophylaxis"],["dispo","Disposition / goals of care"]];
-const ICHK=[["Neuro",[["pain","Pain assessed"],["sedT","Sedation target reviewed"],["delir","Delirium assessed"],["sat","SAT considered"]]],
- ["Respiratory",[["vent","Vent settings reviewed"],["sbt","SBT considered"],["extub","Extubation readiness considered"],["o2wean","O₂ weaning considered"]]],
- ["Cardiovascular",[["perf","Perfusion assessed"],["press","Pressor needs reviewed"],["fluid","Fluid status & goal reviewed"]]],
- ["Infection",[["src","Source identified / controlled"],["cover","Coverage adequate"],["cxrev","Cultures reviewed"],["narrow","Can antibiotics narrow / stop?"]]],
- ["Prevention",[["vte","VTE prophylaxis"],["sup","Stress-ulcer prophylaxis (if indicated)"],["nutr","Nutrition"],["gluc","Glucose management"],["bowel","Bowel regimen"],["skin","Skin / pressure injury"],["mob","Mobility / PT / OT"]]],
- ["Devices",[["foley","Foley still needed"],["cvc","Central line still needed"],["aline","Art line still needed"],["odev","Other devices reviewed"]]],
- ["Communication",[["code","Code status reviewed"],["family","Family update needed"],["goc","Goals-of-care discussion needed"],["cons","Consult recs addressed"]]],
- ["Disposition",[["still","Still needs ICU-level care"],["barr","Transfer barriers identified"],["down","Potential downgrade today"]]]];
+// The hospital's MICU Checklist, in the note's order and wording (copied verbatim into the note).
+const HCHK=[["nutr","Is nutrition at goal?"],["analg","Is analgesia at goal?"],["sedg","Is sedation at goal?"],["vte","Thromboembolism prophylaxis ordered?"],
+ ["hob","Head of bed elevated 30-45 degrees?"],["sup","Stress ulcer prophylaxis ordered?"],["gluc","Is glucose at goal (140-180 mg/dL)?"],["bowel","Is a bowel regimen ordered?"],
+ ["mob","Are PT and OT ordered?"],["fluid","Have fluid balance goals been discussed?"],["mupi","Is mupirocin ointment ordered for universal MRSA nasal decolonization?"],
+ ["foleyRm","Can the foley catheter be removed?"],["cvcRm","Can CVC or PICC be removed?"],["famUpd","Has family been updated as appropriate?"]];
+const HCHKV=[["Y","Yes"],["N","No"],["NA","N/A"]];
+// Extra liberation / safety prompts, kept out of the note block.
+const ICHK=[["Neuro",[["delir","Delirium assessed"],["sat","SAT considered"]]],
+ ["Respiratory",[["sbt","SBT considered"],["extub","Extubation readiness considered"],["o2wean","O₂ weaning considered"]]],
+ ["Infection",[["src","Source identified / controlled"],["cxrev","Cultures reviewed"],["narrow","Can antibiotics narrow / stop?"]]],
+ ["Other",[["skin","Skin / pressure injury"],["aline","Art line still needed"],["code","Code status reviewed"],["goc","Goals-of-care discussion needed"],["cons","Consult recs addressed"]]],
+ ["Disposition",[["still","Still needs ICU-level care"],["down","Potential downgrade today"]]]];
 const CHKV=[["Y","Yes"],["N","No"],["NA","N/A"],["D","Deferred"]];
 const GOALS=[["top","Top 3 priorities today"],["wean","Organ support to reduce"],["targets","Physiologic targets (MAP, SpO₂, net, RASS…)"],["unc","Diagnostic uncertainty to resolve"],["risk","Biggest anticipated risk"],["esc","What would trigger escalation"],["barrier","What's preventing transfer out"]];
 const TRACK_DEF=["cr","lac","hgb","wbc","plt"];
 const help=tip;
+const RSUP_L={RA:"Room air"};
+const PRESS_AB={"Norepinephrine":"NE","Vasopressin":"vaso","Epinephrine":"epi","Phenylephrine":"phenyl","Dopamine":"dopa","Dobutamine":"dobut","Milrinone":"milri","Angiotensin II":"AT-II"};
 
 /* ---------- small building blocks ---------- */
-function ichips(p,path,opts,multi){
+function ichips(p,path,opts,multi,labels={}){
   const v=getPath(p,path);
   return `<div class="chips">${opts.map(o=>{const on=multi?(v||[]).includes(o):v===o;
-    return `<button class="chip ${on?"on":""}" data-act="${multi?"icuPickM":"pick"}" data-k="${path}" data-v="${esc(o)}">${esc(o)}</button>`}).join("")}</div>`;
+    return `<button class="chip ${on?"on":""}${labels[o]?" big":""}" data-act="${multi?"icuPickM":"pick"}" data-k="${path}" data-v="${esc(o)}">${esc(labels[o]||o)}</button>`}).join("")}</div>`;
 }
 function trendSimple(v,pv){const np=num(pv);if(isNaN(np))return"";const nt=num(v);if(isNaN(nt))return "prev "+esc(pv);const d=nt-np;return (Math.abs(d)<1e-9?"→ ":d>0?"↑ ":"↓ ")+esc(pv)}
 function nb(p,path,label,unit=""){
@@ -179,7 +185,7 @@ function abgs(p){
   const path="today.icu.abg",l=getPath(p,path)||[];
   return l.map((g,i)=>{const pre=`${path}.${i}.`,ven=g.type==="VBG";
     return `<div class="rw"><div class="rwh">${sel(pre+"type",["ABG","VBG"],g.type,"Type",1)}<input type="text" class="site" style="max-width:110px" data-k="${pre}time" value="${esc(g.time||"")}" placeholder="time"><input type="text" class="site" data-k="${pre}sup" value="${esc(g.sup||"")}" placeholder="support at draw (e.g. AC/VC PEEP 10)"><button class="x" data-act="icuDelRow" data-path="${path}" data-i="${i}" aria-label="Remove">×</button></div>
-      <div class="nbg">${nb(p,pre+"ph","pH"+(i?"":tip("ph")))}${nb(p,pre+"co2",(ven?"PvCO₂":"PaCO₂")+(i?"":tip("pco2")))}${ven?"":nb(p,pre+"po2","PaO₂")}${nb(p,pre+"hco3","HCO₃"+(i?"":tip("hco3")))}${nb(p,pre+"be","BE")}${nb(p,pre+"lac","Lactate"+(i?"":tip("lactate")))}${nb(p,pre+"fio2","FiO₂ at draw"+(i?"":tip("pf")))}</div>
+      <div class="nbg">${nb(p,pre+"ph","pH"+(i?"":tip("ph")))}${nb(p,pre+"co2",(ven?"PvCO₂":"PaCO₂")+(i?"":tip("pco2")))}${ven?"":nb(p,pre+"po2","PaO₂")}${nb(p,pre+"hco3","HCO₃"+(i?"":tip("hco3")))}${nb(p,pre+"be","BE")}${filled(g.lac)?nb(p,pre+"lac","Lactate"):""}${nb(p,pre+"fio2","FiO₂ at draw"+(i?"":tip("pf")))}</div>
       <div class="calcs" id="calc-abg-${i}">${abgInterp(g).map(x=>`<div>${esc(x)}</div>`).join("")}</div></div>`}).join("")
    +`<button class="add" data-act="icuAddRow" data-path="${path}" data-tpl="abg">＋ Blood gas</button>`;
 }
@@ -269,15 +275,16 @@ function micuHemo(p){
 function micuResp(p){
   const r=ic0(p).r||{},s=r.sup||"",B="today.icu.r.";
   const o2=["NC","Face mask","NRB","Trach collar"].includes(s),wob=`<div class="nb"><span>Work of breathing</span>${ichips(p,B+"wob",["Comfortable","Mild","Moderate","Severe"])}</div>`;
-  let h=`${lbl("Support")}${ichips(p,B+"sup",RSUP)}`;
+  let h=`${lbl("Support")}${ichips(p,B+"sup",RSUP,false,RSUP_L)}`;
   if(o2)h+=`<div class="nbg">${nb(p,B+"flow","Flow","L/min")}${nb(p,B+"spo2t","SpO₂ target","%")}${wob}</div>`;
   if(s==="HFNC")h+=`<div class="nbg">${nb(p,B+"flow","Flow","L/min")}${nb(p,B+"fio2","FiO₂"+tip("fio2"))}${nb(p,B+"spo2t","SpO₂ target","%")}${wob}</div>`;
-  if(s==="CPAP"||s==="BiPAP")h+=`<div class="nbg">${s==="BiPAP"?nb(p,B+"ipap","IPAP"):""}${nb(p,B+"epap",s==="BiPAP"?"EPAP":"CPAP")}${nb(p,B+"fio2","FiO₂")}<div class="nb"><span>Tolerance</span>${ichips(p,B+"tol",["Good","Intermittent","Poor"])}</div></div>`;
+  if(s==="RA")h+=`<div class="nbg">${nb(p,B+"spo2t","SpO₂ target","%")}${wob}</div>`;
+  if(s==="CPAP"||s==="BiPAP")h+=`<div class="nbg">${s==="BiPAP"?nb(p,B+"ipap","IPAP"):""}${nb(p,B+"epap",s==="BiPAP"?"EPAP":"CPAP")}${nb(p,B+"fio2","FiO₂")}${nb(p,B+"spo2t","SpO₂ target","%")}<div class="nb"><span>Tolerance</span>${ichips(p,B+"tol",["Good","Intermittent","Poor"])}</div></div>`;
   if(isVent(r)){
     const m=r.vmode||"",vc=["AC/VC","PRVC","SIMV"].includes(m),pc=m==="AC/PC",ps=m==="PSV"||m==="SIMV",ap=m==="APRV";
     h+=`${lbl("Mode "+tip("vmode"))}${ichips(p,B+"vmode",VMODES)}
     ${lbl("Settings")}<div class="nbg">${!ps||m==="SIMV"?(ap?"":nb(p,B+"vrr","Set RR"+tip("rr"))):""}${vc?nb(p,B+"vvt",(m==="PRVC"?"Target Vt":"Set Vt")+tip("vt"),"mL"):""}${pc?nb(p,B+"vpi","Insp P","cmH₂O")+`<div class="nb"><span>Insp P is</span>${ichips(p,B+"pconv",["above","abs"]).replace(">above<",">above PEEP<").replace(">abs<",">absolute<")}</div>`:""}${ps?nb(p,B+"vps","PS","cmH₂O"):""}
-      ${ap?nb(p,B+"phi","P high")+nb(p,B+"plo","P low")+nb(p,B+"thi","T high")+nb(p,B+"tlo","T low"):nb(p,B+"vpeep","PEEP"+tip("peep"))}${nb(p,B+"fio2","FiO₂"+tip("fio2"))}${m==="Other"?tin(p,B+"vother","Settings",""):""}</div>
+      ${ap?nb(p,B+"phi","P high")+nb(p,B+"plo","P low")+nb(p,B+"thi","T high")+nb(p,B+"tlo","T low"):nb(p,B+"vpeep","PEEP"+tip("peep"))}${nb(p,B+"fio2","FiO₂"+tip("fio2"))}${nb(p,B+"spo2t","SpO₂ target","%")}${m==="Other"?tin(p,B+"vother","Settings",""):""}</div>
     ${lbl("Measured")}<div class="nbg">${nb(p,B+"mrr","Actual RR")}${nb(p,B+"mvt","Exhaled Vt","mL")}${nb(p,B+"mve","Ve","L/min")}${nb(p,B+"pip","PIP"+tip("pip"))}${nb(p,B+"pplat","Pplat"+tip("pplat"))}${nb(p,B+"tpeep","Total PEEP")}</div>
     <div class="fbh">Calculations ${help("dp")}</div><div id="calc-resp">${calcBox(respCalc(p))}</div>
     <div class="nbg"><div class="nb"><span>SBT ${help("satsbt")}</span>${ichips(p,B+"sbt",["Not eligible","Eligible","Passed","Failed","Deferred"])}</div><div class="nb"><span>Extubation</span>${ichips(p,B+"extub",["Not ready","Possible today","Planned","Extubated"])}</div></div>`;
@@ -309,7 +316,7 @@ function micuRenal(p){
   else if(rn.rrt&&rn.rrt!=="None")rrt=tin(p,B+"rrtT","RRT details","last / next session, UF")+"";
   return isec(p,"rn","icu-rn","Renal, fluids & electrolytes",`
     <div class="calcs"><div id="calc-uop">${u?esc(u.txt):"Enter urine in the I/O box (Today's values)."}</div><div id="calc-cr">${esc(crRatio(p))}</div><div id="calc-ag">${ag?esc(ag.txt):""}</div></div> ${tip("uop")}${tip("ag")}
-    <div class="nbg">${nb(p,B+"uopHrs","UOP interval","h, if not 24")}${tin(p,B+"cum","Cumulative balance"+tip("fluidbal"),"+6.2 L since admit")}${tin(p,B+"diur","Diuretics","furosemide 80 IV ×2")}${tin(p,B+"bolus","Fluid boluses","LR 1 L ×1")}</div>
+    <div class="nbg">${nb(p,B+"uopHrs","UOP interval","h, if not 24")}${tin(p,B+"netGoal","Net fluid goal today","−1 L / even")}${tin(p,B+"cum","Cumulative balance"+tip("fluidbal"),"+6.2 L since admit")}${tin(p,B+"diur","Diuretics","furosemide 80 IV ×2")}${tin(p,B+"bolus","Fluid boluses","LR 1 L ×1")}</div>
     <div class="nb"><span>AKI stage (if established) ${tip("kdigo")}</span>${ichips(p,B+"aki",["None","1","2","3"])}</div>
     <div class="nb"><span>RRT ${tip("rrt")}</span>${ichips(p,B+"rrt",["None","iHD","CRRT","PD","Other"])}</div>${rrt}
     ${ta(B+"plan","Renal / fluid plan "+tip("lytes"),"volume status, net goal, diurese vs fluids, lytes to replete, renal dosing, RRT")}`);
@@ -355,16 +362,19 @@ function micuLabs(p,which){
 }
 function trackTable(p,ro){
   const tr=(p.icu||{}).track||TRACK_DEF;
-  const rows=tr.filter(a=>AN[a]).map(a=>{const t=getPath(p,"today.lab."+a),pv=getPath(p,"prior.lab."+a),pd=((p.prior||{}).labDates||{})[a];
-    return `<tr><td>${esc(AN[a][1])}</td><td>${filled(pv)?esc(pv)+(pd?` <span class="yday">${esc(mmdd(pd))}</span>`:""):"—"}</td><td><b>${filled(t)?esc(t):"—"}</b></td><td>${trendOf(p,"lab",a)?trendOf(p,"lab",a).split(" ")[0]:""}</td></tr>`}).join("");
-  return `<table class="trk"><tr><th>Tracked</th><th>Prior</th><th>Today</th><th></th></tr>${rows}</table>
+  const anyAdm=tr.some(a=>filled(getPath(p,"adm.lab."+a)));
+  const rows=tr.filter(a=>AN[a]).filter(a=>!ro||filled(getPath(p,"today.lab."+a))||filled(getPath(p,"prior.lab."+a))).map(a=>{const t=getPath(p,"today.lab."+a),pv=getPath(p,"prior.lab."+a),pd=((p.prior||{}).labDates||{})[a],ad=getPath(p,"adm.lab."+a);
+    const ar=filled(t)&&filled(pv)?trendOf(p,"lab",a).split(" ")[0]:"";
+    return `<tr>${`<td>${esc(AN[a][1])}</td>`}${anyAdm?`<td>${filled(ad)?esc(ad):""}</td>`:""}<td>${filled(pv)?esc(pv)+(pd?` <span class="yday">${esc(mmdd(pd))}</span>`:""):""}</td><td><b>${filled(t)?esc(t):ro?"not drawn":""}</b></td><td>${ar}</td></tr>`}).join("");
+  if(ro&&!rows)return"";
+  return `<table class="trk"><tr><th>Tracked</th>${anyAdm?"<th>Adm</th>":""}<th>Prior</th><th>Today</th><th></th></tr>${rows}</table>
     ${ro?"":`<details class="adv"><summary>Choose tracked labs</summary><div class="chips">${ANALYTES.map(([a,l])=>`<button class="chip ${tr.includes(a)?"on":""}" data-act="icuTrack" data-v="${a}">${esc(l)}</button>`).join("")}</div></details>`}`;
 }
 function micuSysAP(p){
   const titles=p.problems.map(x=>x.p).filter(filled);
   const anyOld=SYS.some(([k])=>Object.keys(((p.sys||{})[k]||{}).old||{}).length);
   return `${anyOld?`<div class="oldbar">Gray = carried over from ${esc(mmdd(p.apFrom)||"yesterday")}. Edit a field to make it current, or tap ✓. <button data-act="icuSysKeepAll">Mark all current</button></div>`:""}
-  ${lbl("Problem list — in priority order, most acute first (#1 = primary ICU problem); link problems to systems below")}${p.problems.map((pr,i)=>`<div class="vrow"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="${i?"Problem":"Primary ICU problem"}"><button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button><button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div>`).join("")}
+  ${lbl("Problem list — in priority order, most acute first (#1 = primary ICU problem); link problems to systems below")}${p.problems.map((pr,i)=>`<div class="vrow"><span class="num">${i+1}.</span><input type="text" data-k="problems.${i}.p" value="${esc(pr.p)}" placeholder="${i?"Problem":"Primary ICU problem"}"><button class="chip sm ${pr.chronic?"on":""}" data-act="pick" data-k="problems.${i}.chronic" data-v="1" title="Chronic condition affecting care">chronic</button>${pr.old&&Object.keys(pr.old).length?`<button class="mini keep" data-act="apKeep" data-i="${i}" title="Still current — un-gray">✓</button>`:""}<button class="mini" data-act="up" data-i="${i}" aria-label="Move up">↑</button><button class="mini" data-act="down" data-i="${i}" aria-label="Move down">↓</button><button class="x" data-act="delProb" data-i="${i}" aria-label="Remove">×</button></div>`).join("")}
   <button class="add" data-act="addProb">＋ Problem</button>
   ${SYS.map(([k,l])=>{const s=(p.sys||{})[k]||{},old=s.old||{};
     return `<div class="prob sysap"><div class="ph"><b>${esc(l)}</b>${Object.keys(old).length?`<button class="mini keep" data-act="icuSysKeep" data-v="${k}">✓</button>`:""}</div>
@@ -374,12 +384,45 @@ function micuSysAP(p){
 function micuGoals(p){
   return isec(p,"g","icu-goals","Today's ICU goals",GOALS.map(([k,l])=>`<div class="goal">${k==="top"?ta("today.icu.g.top",l,"1. … 2. … 3. …"):tin(p,"today.icu.g."+k,l,"")}<button class="mini" data-act="icuToTodo" data-k="today.icu.g.${k}" title="Make a to-do">→ To-do</button></div>`).join(""),{copy:false});
 }
+const hasDev=(p,types)=>(p.dev||[]).some(d=>types.includes(d.type));
+function chkAns(v){return ({Y:"Yes",N:"No",NA:"N/A",D:"Deferred"})[v]||""}
+function chkNoteText(p){
+  const c=ic0(p).chk||{},nt=ic0(p).chkN||{};
+  return "MICU Checklist:\n\n"+HCHK.map(([k,l],i)=>`${i+1}. ${l} ${[chkAns(c[k]),nt[k]].filter(filled).join(" ")}`.trimEnd()).join("\n");
+}
+function chkSuggest(p){
+  const out={},gi=ic0(p).gi||{};
+  if(!hasDev(p,["Foley","Suprapubic catheter"]))out.foleyRm={v:"NA",why:"no Foley in the device list"};
+  if(!hasDev(p,["CVC","PICC","HD catheter"]))out.cvcRm={v:"NA",why:"no CVC / PICC in the device list"};
+  if(filled(gi.sup))out.sup={note:gi.sup,why:"from GI section"};
+  if(filled(gi.bowel))out.bowel={note:gi.bowel,why:"from GI section"};
+  if(gi.diet)out.nutr={note:gi.diet==="Tube feeds"&&filled(gi.tfr)?"TF "+gi.tfr:gi.diet,why:"from GI section"};
+  return out;
+}
 function micuChecklist(p){
-  const c=ic0(p).chk||{},vals=Object.values(c),n=vals.filter(Boolean).length,tot=ICHK.reduce((s,g)=>s+g[1].length,0),no=vals.filter(v=>v==="N").length,def=vals.filter(v=>v==="D").length;
-  return `<details id="icu-chk" class="icusec"><summary>ICU daily safety & liberation checklist <span class="cnt">${n}/${tot} reviewed${no?` · ${no} No`:""}${def?` · ${def} deferred`:""}</span></summary><div class="body">
-    <p class="legend">Yes / No / N/A / Deferred. Blank just means not reviewed yet — not that care was missed.</p>
-    ${ICHK.map(([g,items])=>`<div class="fbh">${g}</div>${items.map(([k,l])=>`<div class="ck"><span>${esc(l)}</span><span class="seg4">${CHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span></div>`).join("")}`).join("")}
+  const c=ic0(p).chk||{},nt=ic0(p).chkN||{},n=HCHK.filter(([k])=>c[k]).length,no=HCHK.filter(([k])=>c[k]==="N").length,sg=chkSuggest(p);
+  const extra=ICHK.flatMap(g=>g[1]),xn=extra.filter(([k])=>c[k]).length;
+  return `<details id="icu-chk" class="icusec" open><summary>MICU Checklist <span class="cnt">${n}/${HCHK.length} answered${no?` · ${no} No`:""}</span></summary><div class="body">
+    <div class="toolbar" style="margin:0 0 8px"><button class="btn pri" data-act="icuChkCopy">⧉ Copy as note text</button>${Object.keys(sg).length?`<button class="btn" data-act="icuChkFill">Fill from chart data</button>`:""}</div>
+    ${HCHK.map(([k,l],i)=>`<div class="ck hck"><span><b>${i+1}.</b> ${esc(l)}${sg[k]&&!c[k]&&sg[k].v?` <em class="sug">${esc(sg[k].why)} → N/A?</em>`:""}</span><span class="seg4">${HCHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span>
+      ${c[k]||filled(nt[k])||(sg[k]&&sg[k].note)?`<input type="text" class="cknote" data-k="today.icu.chkN.${k}" value="${esc(nt[k]||"")}" placeholder="${esc(sg[k]&&sg[k].note?sg[k].note:"note (optional), e.g. home ppi")}">`:""}</div>`).join("")}
+    <details class="adv"><summary>More ICU prompts (not in the note) <span class="cnt">${xn}/${extra.length}</span></summary>
+    <p class="legend">Yes / No / N/A / Deferred. Blank just means not reviewed yet.</p>
+    ${ICHK.map(([g,items])=>`<div class="fbh">${g}</div>${items.map(([k,l])=>`<div class="ck"><span>${esc(l)}</span><span class="seg4">${CHKV.map(([v,t])=>`<button class="seg ${c[k]===v?"on "+(v==="Y"?"ok":v==="N"?"bad":"mid"):""}" data-act="pick" data-k="today.icu.chk.${k}" data-v="${v}">${t}</button>`).join("")}</span></div>`).join("")}`).join("")}</details>
   </div></details>`;
+}
+async function copyText(t,okMsg){
+  try{await navigator.clipboard.writeText(t);toast(okMsg)}
+  catch(e){const w=document.createElement("textarea");w.value=t;w.setAttribute("readonly","");w.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(w);w.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}w.remove();toast(ok?okMsg:"Couldn't copy — select the text and copy it manually.")}
+}
+
+/* ---------- P9: MICU progress = the things a MICU presentation needs today ---------- */
+function micuProgress(p){
+  const ic=ic0(p),r=ic.r||{},h=ic.h||{},n=ic.n||{},T=p.today||{},c=ic.chk||{};
+  const items=[!!(ic.st||{}).traj,!!r.sup&&!(p.icuOld||{}).r,!!(mapCalc(p)&&!mapCalc(p).bad),(h.press||[]).some(x=>x.drug)||!!h.pressNone,
+    !isVent(r)||filled(n.rass),anyIn(T.ios,[...IO_IN,...IO_OUT]),hasLabs(p,"today")||filled(T.labs),exHas(T.ex)&&!Object.keys(p.exOld||{}).length,
+    !!ic.devOK,HCHK.filter(([k])=>c[k]).length===HCHK.length,!Object.keys(p.icuOld||{}).length];
+  return Math.round(100*items.filter(Boolean).length/items.length);
 }
 
 /* ---------- MICU top block, list badges ---------- */
@@ -391,15 +434,23 @@ function micuBadges(p){
   const ic=ic0(p),r=ic.r||{},b=[];
   if(hday((p.icu||{}).iAdm))b.push("ICU d"+hday(p.icu.iAdm));
   if(r.sup&&r.sup!=="RA")b.push(r.sup);
-  (ic.h&&ic.h.press||[]).filter(x=>x.drug).forEach(x=>b.push(dripName(x).slice(0,4)+" "+(x.cur||"")));
+  (ic.h&&ic.h.press||[]).filter(x=>x.drug).forEach(x=>b.push((PRESS_AB[x.drug]||dripName(x))+" "+(x.cur||"")));
   if(ic.rn&&ic.rn.rrt&&ic.rn.rrt!=="None")b.push(ic.rn.rrt);
   if(ic.st&&ic.st.traj)b.push(ic.st.traj);
   return `<span class="bdg cs">MICU</span>`+b.map(x=>`<span class="bdg cs">${esc(x)}</span>`).join("");
 }
 
 /* ---------- actions, freshness, rollover ---------- */
+// "Copy yesterday's" never carries overnight-only or point-in-time measurements: those must be today's.
+const COPY_SKIP={h:["map","mapLow","hrR","bpR","tCur","tR"],st:["ev"],gi:["glu","lbm"],r:["mrr","mvt","mve","pip","pplat","tpeep"],n:[]};
+function copySkip(s,o){
+  (COPY_SKIP[s]||[]).forEach(k=>delete o[k]);
+  if(s==="h")(o.press||[]).forEach(r=>delete r.max);
+  if(s==="n")(o.sed||[]).forEach(r=>delete r.prn);
+  return o;
+}
 const ROW_TPL={drip:()=>({drug:"",cur:"",unit:"",max:""}),ev:()=>({type:"",time:"",what:"",intv:"",resp:""}),abg:()=>({type:"ABG",time:""}),
-  dev:()=>({type:"",site:"",date:today()}),abx:()=>({name:"",start:today()})};
+  dev:()=>({type:"",site:"",date:""}),abx:()=>({name:"",start:""})};
 function icuFresh(p,k){
   const m=k.match(/^today\.icu\.(\w+)\./);
   if(m&&(p.icuOld||{})[m[1]]){delete p.icuOld[m[1]];markTs("icuOld."+m[1],p);const s=$("main").querySelector(`.icusec[data-sec="${m[1]}"]`);if(s){s.classList.remove("oldsec");const ob=s.querySelector(".oldbar");if(ob)ob.remove()}}
@@ -432,7 +483,7 @@ function icuAct(a,b,p,i){
     case"icuNeed":{const d=p.dev[i];d.need=d.needD===today()&&d.need===b.dataset.v?"":b.dataset.v;d.needD=today();markTs("dev");rr();break}
     case"icuCopy":{const s=b.dataset.sec,src=pi0(p)[s];if(!src)break;
       p.today.icu=p.today.icu||{};if(sectionFilled(p.today.icu[s])&&!confirm("Replace what you've entered today in this section with yesterday's?"))break;
-      p.today.icu[s]=clone(src);p.icuOld=p.icuOld||{};p.icuOld[s]=p.prior.icuDate||"";markAll(p,"today.icu."+s,p.today.icu[s]);markTs("icuOld."+s);rr();
+      p.today.icu[s]=copySkip(s,clone(src));p.icuOld=p.icuOld||{};p.icuOld[s]=p.prior.icuDate||"";markAll(p,"today.icu."+s,p.today.icu[s]);markTs("icuOld."+s);rr();
       toast("Copied — gray until you check it against today's chart.");break}
     case"icuKeep":{const s=b.dataset.sec;if(p.icuOld)delete p.icuOld[s];markTs("icuOld."+s);rr();break}
     case"icuSysKeep":{const s=(p.sys||{})[b.dataset.v];if(s){s.old={};markTs("sys."+b.dataset.v+".old")}rr();break}
@@ -441,6 +492,10 @@ function icuAct(a,b,p,i){
       p.todos=p.todos||[];v.split(/\n+/).map(s=>s.replace(/^\s*\d+[.)]\s*/,"").trim()).filter(Boolean).forEach(t=>p.todos.push({t,done:false,st:"",cat:""}));markTs("todos");rr();toast("Added to To-do.");break}
     case"icuTrack":{p.icu=p.icu||{};const l=p.icu.track=(p.icu.track||TRACK_DEF.slice());const j=l.indexOf(b.dataset.v);if(j>=0)l.splice(j,1);else l.push(b.dataset.v);markTs("icu.track");rr();break}
     case"icuBrief":presBrief=b.dataset.v==="1";render();break;
+    case"icuChkCopy":{const un=HCHK.filter(([k])=>!(ic0(p).chk||{})[k]).length;copyText(chkNoteText(p),un?`Copied — ${un} item${un>1?"s":""} still unanswered.`:"Copied the MICU Checklist — paste it into the note.");break}
+    case"icuChkFill":{p.today.icu=p.today.icu||{};const c=p.today.icu.chk=p.today.icu.chk||{},nt=p.today.icu.chkN=p.today.icu.chkN||{},sg=chkSuggest(p);let n=0;
+      Object.entries(sg).forEach(([k,x])=>{if(x.v&&!c[k]){c[k]=x.v;markTs("today.icu.chk."+k);n++}if(x.note&&!filled(nt[k])){nt[k]=x.note;markTs("today.icu.chkN."+k);n++}});
+      rr();toast(n?`Filled ${n} from the chart data — check them.`:"Nothing new to fill.");break}
     case"icuDefMode":S.defMode=S.defMode==="micu"?"gen":"micu";saveNow();$("mDef").textContent="New patients start in: "+(S.defMode==="micu"?"MICU":"General medicine");break;
     case"icuPractice":S.practice=!S.practice;saveNow();hide("menu");render();break;
     default:presAct(a,b,p,i);
